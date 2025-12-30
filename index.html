@@ -2,8 +2,16 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Sona - Financial Planner with AI</title>
+    
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sona">
+    
+    <!-- Icon Aplikasi untuk iOS (Menggunakan placeholder icon dompet) -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/272/272525.png">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -58,6 +66,8 @@
             font-family: var(--font-sans);
             background-color: #f8fafc;
             color: var(--foreground);
+            /* Prevent bounce scrolling on mobile to feel more like an app */
+            overscroll-behavior-y: none;
         }
 
         /* Custom Scrollbar */
