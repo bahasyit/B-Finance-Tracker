@@ -121,7 +121,9 @@
             Download,
             Upload,
             Save,
-            FileJson
+            FileJson,
+            Settings,
+            Key
         } from 'lucide-react';
         import { 
             PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip, 
@@ -131,10 +133,13 @@
         import { clsx } from 'clsx';
         import { twMerge } from 'tailwind-merge';
 
-        // --- GEMINI SETUP ---
-        const apiKey = ""; // API Key injected by environment
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
+        // --- GEMINI HELPER ---
+        // Dynamically create model instance based on provided key
+        function getGeminiModel(apiKey) {
+            if (!apiKey) return null;
+            const genAI = new GoogleGenerativeAI(apiKey);
+            return genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
+        }
 
         // --- UTILS ---
         function cn(...inputs) {
@@ -271,15 +276,67 @@
             );
         };
 
-        // --- NEW: AI COMPONENTS ---
+        // --- NEW: SETTINGS DIALOG ---
+        function SettingsDialog({ isOpen, onOpenChange, apiKey, setApiKey }) {
+            const [localKey, setLocalKey] = useState(apiKey);
 
-        function AIAdvisor({ transactions, budgets, goals }) {
+            const handleSave = () => {
+                setApiKey(localKey);
+                onOpenChange(false);
+                toast.success("API Key berhasil disimpan!");
+            };
+
+            return (
+                <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                    <div className="space-y-4">
+                        <div>
+                            <h2 className="text-lg font-semibold">Pengaturan Aplikasi</h2>
+                            <p className="text-sm text-slate-500">Konfigurasi API Key untuk mengaktifkan fitur AI.</p>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="api-key">Gemini API Key</Label>
+                            <div className="relative">
+                                <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    id="api-key"
+                                    value={localKey}
+                                    onChange={(e) => setLocalKey(e.target.value)}
+                                    placeholder="Tempel API Key Anda di sini..."
+                                    className="pl-9"
+                                    type="password"
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Key ini disimpan di browser Anda (LocalStorage), tidak dikirim ke server kami. 
+                                Dapatkan key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.
+                            </p>
+                        </div>
+
+                        <Button onClick={handleSave} className="w-full">Simpan Pengaturan</Button>
+                    </div>
+                </Dialog>
+            );
+        }
+
+        // --- AI COMPONENTS ---
+
+        function AIAdvisor({ transactions, budgets, goals, apiKey, onOpenSettings }) {
             const [advice, setAdvice] = useState("");
             const [isLoading, setIsLoading] = useState(false);
 
             const generateAdvice = async () => {
+                if (!apiKey) {
+                    toast.error("API Key belum diatur. Silakan buka pengaturan.");
+                    onOpenSettings();
+                    return;
+                }
+
                 setIsLoading(true);
                 try {
+                    const model = getGeminiModel(apiKey);
+                    if (!model) throw new Error("Failed to initialize model");
+
                     const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
                     const totalExpenses = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
                     const topCategories = Object.entries(transactions.filter(t => t.type === "expense").reduce((acc, t) => {
@@ -309,7 +366,7 @@
                     setAdvice(response.text());
                 } catch (error) {
                     console.error("AI Error:", error);
-                    toast.error("Gagal mendapatkan saran AI. Coba lagi nanti.");
+                    toast.error("Gagal mendapatkan saran AI. Periksa API Key Anda.");
                 } finally {
                     setIsLoading(false);
                 }
@@ -336,6 +393,16 @@
                             {advice ? "Analisis Ulang" : "Analisis Keuanganku"}
                         </Button>
                     </div>
+
+                    {!apiKey && (
+                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg flex items-center gap-3">
+                            <Key className="h-5 w-5" />
+                            <div className="text-sm">
+                                <strong>API Key Diperlukan:</strong> Untuk menggunakan fitur AI, harap masukkan Gemini API Key Anda di menu Pengaturan.
+                            </div>
+                            <Button size="sm" variant="outline" onClick={onOpenSettings} className="ml-auto bg-white border-yellow-300 hover:bg-yellow-100">Atur Key</Button>
+                        </div>
+                    )}
 
                     <Card className="min-h-[300px] border-purple-100 shadow-md">
                         <CardContent className="p-6">
@@ -519,10 +586,17 @@
         }
 
         // 2. RECEIPT SCANNER (AI POWERED)
-        function ReceiptScanner({ onScanComplete, categories }) {
+        function ReceiptScanner({ onScanComplete, categories, apiKey, onOpenSettings }) {
             const [isScanning, setIsScanning] = useState(false);
             
             const handleScan = async (e) => {
+                if (!apiKey) {
+                    toast.error("API Key belum diatur.");
+                    onOpenSettings();
+                    e.target.value = null; // reset
+                    return;
+                }
+
                 const file = e.target.files?.[0];
                 if (!file) return;
                 
@@ -530,6 +604,9 @@
                 toast.info("Sedang memproses struk dengan AI...");
 
                 try {
+                    const model = getGeminiModel(apiKey);
+                    if (!model) throw new Error("No model");
+
                     const imagePart = await fileToGenerativePart(file);
                     
                     const prompt = `
@@ -556,7 +633,7 @@
                     
                 } catch (error) {
                     console.error("Scan Error:", error);
-                    toast.error("Gagal memindai struk. Pastikan gambar jelas.");
+                    toast.error("Gagal memindai struk. Pastikan API Key benar dan gambar jelas.");
                 } finally {
                     setIsScanning(false);
                     // Reset file input
@@ -587,13 +664,14 @@
                                 Pilih Foto
                             </Button>
                         </div>
+                        {!apiKey && <p className="text-xs text-red-500">*Butuh API Key</p>}
                     </CardContent>
                 </Card>
             );
         }
 
         // 3. TRANSACTIONS
-        function Transactions({ transactions, wallets, onAddTransaction, onDeleteTransaction, categories }) {
+        function Transactions({ transactions, wallets, onAddTransaction, onDeleteTransaction, categories, apiKey, onOpenSettings }) {
             const [isOpen, setIsOpen] = useState(false);
             const [type, setType] = useState("expense");
             const [amount, setAmount] = useState("");
@@ -609,8 +687,18 @@
 
             const handleSmartProcess = async () => {
                 if (!smartInput.trim()) return;
+                
+                if (!apiKey) {
+                    toast.error("API Key belum diatur.");
+                    onOpenSettings();
+                    return;
+                }
+
                 setIsSmartProcessing(true);
                 try {
+                    const model = getGeminiModel(apiKey);
+                    if (!model) throw new Error("No model");
+
                     const prompt = `
                         Extract transaction details from this text: '${smartInput}'. 
                         Return JSON string only (no markdown) with keys: 
@@ -632,7 +720,7 @@
                     toast.success("Data diisi otomatis oleh AI! ✨");
                 } catch (e) {
                     console.error(e);
-                    toast.error("Gagal memproses input pintar.");
+                    toast.error("Gagal memproses input pintar. Cek API Key.");
                 } finally {
                     setIsSmartProcessing(false);
                 }
@@ -671,7 +759,7 @@
                         </Button>
                     </div>
 
-                    <ReceiptScanner onScanComplete={handleScanResult} categories={categories} />
+                    <ReceiptScanner onScanComplete={handleScanResult} categories={categories} apiKey={apiKey} onOpenSettings={onOpenSettings} />
 
                     <div className="flex gap-4 mb-4 overflow-x-auto pb-2">
                          <Button variant={filterType === "all" ? "default" : "outline"} onClick={() => setFilterType("all")} size="sm">Semua</Button>
@@ -738,7 +826,9 @@
                                         {isSmartProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                     </Button>
                                 </div>
-                                <p className="text-[10px] text-purple-600/70 mt-1">Ketik transaksi Anda dan biarkan AI mengisinya untuk Anda.</p>
+                                <p className="text-[10px] text-purple-600/70 mt-1">
+                                    {!apiKey ? <span className="text-red-500">API Key belum diatur!</span> : "Ketik transaksi Anda dan biarkan AI mengisinya untuk Anda."}
+                                </p>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
@@ -1043,6 +1133,7 @@
         function App() {
             const [activeTab, setActiveTab] = useState("dashboard");
             const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
             const fileInputRef = useRef(null);
             
             // STATE
@@ -1062,12 +1153,16 @@
                 const s = localStorage.getItem("sona-goals");
                 return s ? JSON.parse(s) : [];
             });
+            const [apiKey, setApiKey] = useState(() => {
+                return localStorage.getItem("sona_api_key") || "";
+            });
 
             // PERSISTENCE
             useEffect(() => localStorage.setItem("sona-wallets", JSON.stringify(wallets)), [wallets]);
             useEffect(() => localStorage.setItem("sona-transactions", JSON.stringify(transactions)), [transactions]);
             useEffect(() => localStorage.setItem("sona-budgets", JSON.stringify(budgets)), [budgets]);
             useEffect(() => localStorage.setItem("sona-goals", JSON.stringify(goals)), [goals]);
+            useEffect(() => localStorage.setItem("sona_api_key", apiKey), [apiKey]);
 
             // ACTIONS
             const addTx = (t) => {
@@ -1152,11 +1247,11 @@
             const renderContent = () => {
                 switch(activeTab) {
                     case "dashboard": return <Dashboard transactions={transactions} budgets={budgets} goals={goals} />;
-                    case "transactions": return <Transactions transactions={transactions} wallets={wallets} onAddTransaction={addTx} onDeleteTransaction={delTx} categories={CATEGORIES} />;
+                    case "transactions": return <Transactions transactions={transactions} wallets={wallets} onAddTransaction={addTx} onDeleteTransaction={delTx} categories={CATEGORIES} apiKey={apiKey} onOpenSettings={() => setIsSettingsOpen(true)} />;
                     case "wallets": return <Wallets wallets={wallets} transactions={transactions} onAddWallet={addWallet} onDeleteWallet={delWallet} />;
                     case "budgets": return <Budgets budgets={budgets} onAddBudget={addBudget} onDeleteBudget={delBudget} categories={CATEGORIES} />;
                     case "goals": return <Goals goals={goals} onAddGoal={addGoal} onUpdateGoal={updateGoal} onDeleteGoal={delGoal} />;
-                    case "ai-advisor": return <AIAdvisor transactions={transactions} budgets={budgets} goals={goals} />;
+                    case "ai-advisor": return <AIAdvisor transactions={transactions} budgets={budgets} goals={goals} apiKey={apiKey} onOpenSettings={() => setIsSettingsOpen(true)} />;
                     default: return null;
                 }
             };
@@ -1183,15 +1278,21 @@
             return (
                 <div className="flex flex-col lg:flex-row min-h-screen bg-slate-50">
                     <Toaster richColors position="top-center" />
+                    <SettingsDialog isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} apiKey={apiKey} setApiKey={setApiKey} />
                     
                     {/* Hidden Input for Import */}
                     <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
 
                     {/* Desktop Sidebar */}
                     <aside className="hidden lg:flex lg:flex-col lg:w-72 bg-white border-r h-screen sticky top-0">
-                        <div className="p-6 border-b">
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
-                            <p className="text-xs text-slate-500 mt-1">Personal Finance</p>
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
+                                <p className="text-xs text-slate-500 mt-1">Personal Finance</p>
+                            </div>
+                            <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                                <Settings className="h-5 w-5" />
+                            </button>
                         </div>
                         <nav className="flex-1 p-4 space-y-1">
                             <NavItem id="dashboard" label="Beranda" icon={LayoutDashboard} />
@@ -1243,6 +1344,13 @@
                                 <div className="border-t my-2 pt-2"></div>
                                 <NavItem id="ai-advisor" label="AI Advisor" icon={Sparkles} isAi={true} />
                                 
+                                <div className="border-t my-4 pt-4">
+                                    <p className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Settings</p>
+                                    <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-4 px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl">
+                                        <Settings className="h-5 w-5" /> Pengaturan API
+                                    </button>
+                                </div>
+
                                 <div className="border-t my-4 pt-4">
                                     <p className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Data Management</p>
                                     <button onClick={() => { handleExport(); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-4 px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl">
