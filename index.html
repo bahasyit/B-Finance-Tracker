@@ -10,8 +10,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Sona">
     
-    <!-- Icon Aplikasi untuk iOS (Menggunakan placeholder icon dompet) -->
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/272/272525.png">
+    <!-- Icon Aplikasi untuk iOS (Menggunakan Sona.png jika ada, fallback ke icon dompet) -->
+    <link rel="apple-touch-icon" href="Sona.png">
+    <link rel="icon" href="Sona.png" type="image/png">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1296,9 +1297,17 @@
                     {/* Desktop Sidebar */}
                     <aside className="hidden lg:flex lg:flex-col lg:w-72 bg-white border-r h-screen sticky top-0">
                         <div className="p-6 border-b flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
-                                <p className="text-xs text-slate-500 mt-1">Personal Finance</p>
+                            <div className="flex items-center gap-2">
+                                <img 
+                                    src="Sona.png" 
+                                    alt="Logo" 
+                                    className="h-8 w-auto object-contain" 
+                                    onError={(e) => e.currentTarget.style.display = 'none'} 
+                                />
+                                <div>
+                                    <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
+                                    <p className="text-xs text-slate-500 mt-1">Personal Finance</p>
+                                </div>
                             </div>
                             <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
                                 <Settings className="h-5 w-5" />
@@ -1334,7 +1343,13 @@
 
                     {/* Mobile Header */}
                     <header className="lg:hidden bg-white border-b p-4 sticky top-0 z-20 flex items-center justify-between shadow-sm">
-                         <div>
+                         <div className="flex items-center gap-2">
+                            <img 
+                                src="Sona.png" 
+                                alt="Logo" 
+                                className="h-8 w-auto object-contain" 
+                                onError={(e) => e.currentTarget.style.display = 'none'} 
+                            />
                             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
                         </div>
                         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
