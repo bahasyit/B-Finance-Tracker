@@ -987,9 +987,9 @@
                             return (
                                 <Card key={b.id}>
                                     <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-center">
-                                            <CardTitle className="text-lg">{b.category}</CardTitle>
-                                            <button onClick={() => onDeleteBudget(b.id)} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4"/></button>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <CardTitle className="text-lg truncate">{b.category}</CardTitle>
+                                            <button onClick={() => onDeleteBudget(b.id)} className="text-slate-400 hover:text-red-500 shrink-0"><Trash2 className="h-4 w-4"/></button>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4 pt-2">
@@ -999,8 +999,8 @@
                                         </div>
                                         <Progress value={Math.min(pct, 100)} className={cn("h-2", isOver ? "bg-red-100" : "bg-slate-100")} />
                                         <div className="flex items-center gap-2 text-sm">
-                                            {isOver ? <AlertCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
-                                            <span className={isOver ? "text-red-600" : "text-green-600"}>
+                                            {isOver ? <AlertCircle className="h-4 w-4 text-red-500 shrink-0" /> : <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
+                                            <span className={isOver ? "text-red-600 truncate" : "text-green-600 truncate"}>
                                                 {isOver ? `Over budget (${pct.toFixed(0)}%)` : `Sisa ${formatIDR(b.limit - b.spent)}`}
                                             </span>
                                         </div>
@@ -1076,12 +1076,12 @@
                             return (
                                 <Card key={g.id} className="relative overflow-hidden">
                                     {isDone && <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>}
-                                    <CardHeader className="flex flex-row items-start justify-between pb-2">
-                                        <div>
-                                            <CardTitle className="text-lg">{g.name}</CardTitle>
+                                    <CardHeader className="flex flex-row items-start justify-between pb-2 gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <CardTitle className="text-lg truncate">{g.name}</CardTitle>
                                             <p className="text-xs text-slate-500 mt-1">Target: {formatIDR(g.targetAmount)}</p>
                                         </div>
-                                        <button onClick={() => onDeleteGoal(g.id)} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4"/></button>
+                                        <button onClick={() => onDeleteGoal(g.id)} className="text-slate-400 hover:text-red-500 shrink-0"><Trash2 className="h-4 w-4"/></button>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="flex justify-between items-end">
