@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Sona">
     
-    <!-- Icon Aplikasi untuk iOS (Menggunakan Sona.png jika ada, fallback ke icon dompet) -->
+    <!-- Icon Aplikasi -->
     <link rel="apple-touch-icon" href="Sona.png">
     <link rel="icon" href="Sona.png" type="image/png">
     
@@ -20,7 +20,7 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- React & Libraries via Import Map for ES Modules -->
+    <!-- React & Libraries via Import Map -->
     <script type="importmap">
     {
       "imports": {
@@ -43,49 +43,21 @@
             --font-sans: 'Inter', sans-serif;
             --background: #ffffff;
             --foreground: #020817;
-            --card: #ffffff;
-            --card-foreground: #020817;
-            --popover: #ffffff;
-            --popover-foreground: #020817;
             --primary: #0f172a;
             --primary-foreground: #f8fafc;
-            --secondary: #f1f5f9;
-            --secondary-foreground: #0f172a;
-            --muted: #f1f5f9;
-            --muted-foreground: #64748b;
-            --accent: #f1f5f9;
-            --accent-foreground: #0f172a;
-            --destructive: #ef4444;
-            --destructive-foreground: #f8fafc;
-            --border: #e2e8f0;
-            --input: #e2e8f0;
-            --ring: #020817;
-            --radius: 0.75rem;
         }
         
         body {
             font-family: var(--font-sans);
             background-color: #f8fafc;
             color: var(--foreground);
-            /* Prevent bounce scrolling on mobile to feel more like an app */
-            overscroll-behavior-y: none;
+            overscroll-behavior-y: none; /* Prevent bounce scrolling */
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         
         /* Markdown Styles */
         .prose h3 { font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; color: #1e293b; }
@@ -103,59 +75,23 @@
         import { createRoot } from 'react-dom/client';
         import { GoogleGenerativeAI } from "@google/generative-ai";
         import { 
-            LayoutDashboard, 
-            Receipt, 
-            Wallet as WalletIcon, 
-            PiggyBank, 
-            Target, 
-            Plus, 
-            Trash2, 
-            ArrowUpCircle, 
-            ArrowDownCircle, 
-            Filter, 
-            CreditCard, 
-            Banknote, 
-            TrendingUp, 
-            TrendingDown, 
-            Calendar as CalendarIcon, 
-            CheckCircle, 
-            AlertCircle,
-            X,
-            Menu,
-            Camera,
-            Loader2,
-            ChevronDown,
-            Sparkles,
-            Bot,
-            Send,
-            Lightbulb,
-            Download,
-            Upload,
-            Save,
-            FileJson,
-            Settings,
-            Key
+            LayoutDashboard, Receipt, Wallet as WalletIcon, PiggyBank, Target, 
+            Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Filter, CreditCard, 
+            Banknote, TrendingUp, TrendingDown, Calendar as CalendarIcon, 
+            CheckCircle, AlertCircle, X, Menu, Camera, Loader2, ChevronDown, 
+            Sparkles, Bot, Lightbulb, Download, Upload, Settings, Key, 
+            Eye, EyeOff, LineChart, History, ArrowRight
         } from 'lucide-react';
         import { 
             PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip, 
-            BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line 
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as RechartsLineChart, Line, ReferenceLine
         } from 'recharts';
         import { Toaster, toast } from 'sonner';
         import { clsx } from 'clsx';
         import { twMerge } from 'tailwind-merge';
 
-        // --- GEMINI HELPER ---
-        // Dynamically create model instance based on provided key
-        function getGeminiModel(apiKey) {
-            if (!apiKey) return null;
-            const genAI = new GoogleGenerativeAI(apiKey);
-            return genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
-        }
-
-        // --- UTILS ---
-        function cn(...inputs) {
-            return twMerge(clsx(inputs));
-        }
+        // --- UTILS & HELPERS ---
+        function cn(...inputs) { return twMerge(clsx(inputs)); }
 
         function formatIDR(amount) {
             return new Intl.NumberFormat('id-ID', {
@@ -164,6 +100,15 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
             }).format(amount);
+        }
+
+        // Helper untuk privasi (Sembunyikan Uang)
+        const displayMoney = (amount, isPrivacy) => isPrivacy ? "••••••" : formatIDR(amount);
+
+        function getGeminiModel(apiKey) {
+            if (!apiKey) return null;
+            const genAI = new GoogleGenerativeAI(apiKey);
+            return genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
         }
 
         async function fileToGenerativePart(file) {
@@ -177,7 +122,6 @@
         }
 
         // --- UI COMPONENTS ---
-        
         const Button = React.forwardRef(({ className, variant = "default", size = "default", ...props }, ref) => {
             const variants = {
                 default: "bg-slate-900 text-white hover:bg-slate-900/90",
@@ -188,39 +132,13 @@
                 link: "text-slate-900 underline-offset-4 hover:underline",
                 ai: "bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 border-0 shadow-sm",
             };
-            const sizes = {
-                default: "h-10 px-4 py-2",
-                sm: "h-9 rounded-md px-3",
-                lg: "h-11 rounded-md px-8",
-                icon: "h-10 w-10",
-            };
-            return (
-                <button
-                    ref={ref}
-                    className={cn(
-                        "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-                        variants[variant],
-                        sizes[size],
-                        className
-                    )}
-                    {...props}
-                />
-            );
+            const sizes = { default: "h-10 px-4 py-2", sm: "h-9 rounded-md px-3", lg: "h-11 rounded-md px-8", icon: "h-10 w-10" };
+            return <button ref={ref} className={cn("inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:pointer-events-none disabled:opacity-50", variants[variant], sizes[size], className)} {...props} />;
         });
 
-        const Input = React.forwardRef(({ className, type, ...props }, ref) => {
-            return (
-                <input
-                    type={type}
-                    className={cn(
-                        "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                        className
-                    )}
-                    ref={ref}
-                    {...props}
-                />
-            );
-        });
+        const Input = React.forwardRef(({ className, ...props }, ref) => (
+            <input className={cn("flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50", className)} ref={ref} {...props} />
+        ));
 
         const Card = React.forwardRef(({ className, ...props }, ref) => (
             <div ref={ref} className={cn("rounded-xl border border-slate-200 bg-white text-slate-950 shadow-sm", className)} {...props} />
@@ -236,16 +154,8 @@
         ));
 
         const Badge = ({ className, variant = "default", ...props }) => {
-            const variants = {
-                default: "border-transparent bg-slate-900 text-slate-50 hover:bg-slate-900/80",
-                secondary: "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-100/80",
-                destructive: "border-transparent bg-red-500 text-slate-50 hover:bg-red-500/80",
-                outline: "text-slate-950",
-                ai: "border-transparent bg-purple-100 text-purple-700",
-            };
-            return (
-                <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2", variants[variant], className)} {...props} />
-            );
+            const variants = { default: "bg-slate-900 text-slate-50", secondary: "bg-slate-100 text-slate-900", destructive: "bg-red-500 text-slate-50", outline: "text-slate-950" };
+            return <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950", variants[variant], className)} {...props} />;
         };
 
         const Progress = React.forwardRef(({ className, value, ...props }, ref) => (
@@ -260,11 +170,7 @@
 
         const Select = ({ value, onValueChange, children, className }) => (
             <div className="relative">
-                <select 
-                    value={value} 
-                    onChange={(e) => onValueChange(e.target.value)}
-                    className={cn("flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none", className)}
-                >
+                <select value={value} onChange={(e) => onValueChange(e.target.value)} className={cn("flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 appearance-none", className)}>
                    {children}
                 </select>
                 <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
@@ -277,686 +183,396 @@
             return (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 animate-in fade-in-0">
                     <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                        <button onClick={() => onOpenChange(false)} className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2">
-                            <X className="h-4 w-4" />
-                            <span className="sr-only">Close</span>
-                        </button>
+                        <button onClick={() => onOpenChange(false)} className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
                         {children}
                     </div>
                 </div>
             );
         };
 
-        // --- NEW: SETTINGS DIALOG ---
         function SettingsDialog({ isOpen, onOpenChange, apiKey, setApiKey }) {
             const [localKey, setLocalKey] = useState(apiKey);
-
-            const handleSave = () => {
-                setApiKey(localKey);
-                onOpenChange(false);
-                toast.success("API Key berhasil disimpan!");
-            };
-
+            const handleSave = () => { setApiKey(localKey); onOpenChange(false); toast.success("API Key berhasil disimpan!"); };
             return (
                 <Dialog open={isOpen} onOpenChange={onOpenChange}>
                     <div className="space-y-4">
-                        <div>
-                            <h2 className="text-lg font-semibold">Pengaturan Aplikasi</h2>
-                            <p className="text-sm text-slate-500">Konfigurasi API Key untuk mengaktifkan fitur AI.</p>
-                        </div>
-                        
+                        <h2 className="text-lg font-semibold">Pengaturan API Key</h2>
                         <div className="space-y-2">
-                            <Label htmlFor="api-key">Gemini API Key</Label>
-                            <div className="relative">
-                                <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                <Input 
-                                    id="api-key"
-                                    value={localKey}
-                                    onChange={(e) => setLocalKey(e.target.value)}
-                                    placeholder="Tempel API Key Anda di sini..."
-                                    className="pl-9"
-                                    type="password"
-                                />
-                            </div>
-                            <p className="text-xs text-slate-500">
-                                Key ini disimpan di browser Anda (LocalStorage), tidak dikirim ke server kami. 
-                                Dapatkan key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.
-                            </p>
+                            <Label>Gemini API Key</Label>
+                            <Input value={localKey} onChange={(e) => setLocalKey(e.target.value)} placeholder="Masukkan Key Anda..." type="password" />
+                            <p className="text-xs text-slate-500">Key disimpan di browser Anda (LocalStorage).</p>
                         </div>
-
-                        <Button onClick={handleSave} className="w-full">Simpan Pengaturan</Button>
+                        <Button onClick={handleSave} className="w-full">Simpan</Button>
                     </div>
                 </Dialog>
             );
         }
 
-        // --- AI COMPONENTS ---
+        // --- COMPONENTS ---
+
+        function MonthlyInsight({ transactions, isPrivacyMode }) {
+            const availableMonths = useMemo(() => {
+                const months = new Set(transactions.map(t => t.date.substring(0, 7)));
+                return Array.from(months).sort().reverse();
+            }, [transactions]);
+
+            const [selectedMonth, setSelectedMonth] = useState(availableMonths[0] || new Date().toISOString().substring(0, 7));
+
+            const monthlyData = useMemo(() => transactions.filter(t => t.date.startsWith(selectedMonth)), [transactions, selectedMonth]);
+            
+            const income = monthlyData.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+            const expense = monthlyData.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+            
+            const categoryData = useMemo(() => {
+                const stats = monthlyData.filter(t => t.type === "expense").reduce((acc, t) => {
+                    acc[t.category] = (acc[t.category] || 0) + t.amount; 
+                    return acc;
+                }, {});
+                
+                return Object.entries(stats)
+                    .map(([name, value]) => ({ 
+                        name, 
+                        value, 
+                        percent: expense > 0 ? (value / expense) * 100 : 0 
+                    }))
+                    .sort((a, b) => b.value - a.value);
+            }, [monthlyData, expense]);
+
+            const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7c7c"];
+
+            if (availableMonths.length === 0) return <div className="text-center py-10 text-slate-500">Belum ada data transaksi.</div>;
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold truncate">Insight Bulanan</h2>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth} className="w-32">
+                            {availableMonths.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        </Select>
+                    </div>
+                    
+                    {/* Summary Cards */}
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Card className="bg-green-50 border-green-100"><CardContent className="p-4"><div className="text-sm font-medium text-green-700">Pemasukan</div><div className="text-2xl font-bold text-green-700 truncate">{displayMoney(income, isPrivacyMode)}</div></CardContent></Card>
+                        <Card className="bg-red-50 border-red-100"><CardContent className="p-4"><div className="text-sm font-medium text-red-700">Pengeluaran</div><div className="text-2xl font-bold text-red-700 truncate">{displayMoney(expense, isPrivacyMode)}</div></CardContent></Card>
+                        <Card className="bg-blue-50 border-blue-100"><CardContent className="p-4"><div className="text-sm font-medium text-blue-700">Sisa</div><div className="text-2xl font-bold text-blue-700 truncate">{displayMoney(income - expense, isPrivacyMode)}</div></CardContent></Card>
+                    </div>
+
+                    {/* Breakdown Kategori (UPDATED) */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Chart */}
+                        <Card>
+                            <CardHeader><CardTitle>Distribusi Pengeluaran</CardTitle></CardHeader>
+                            <CardContent>
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie 
+                                                data={categoryData} 
+                                                cx="50%" 
+                                                cy="50%" 
+                                                innerRadius={60}
+                                                outerRadius={80} 
+                                                paddingAngle={5}
+                                                fill="#8884d8" 
+                                                dataKey="value" 
+                                                label={({percent}) => `${(percent * 100).toFixed(0)}%`}
+                                            >
+                                                {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                            </Pie>
+                                            <RechartsTooltip formatter={(val) => displayMoney(val, isPrivacyMode)} />
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* List Persentase (NEW) */}
+                        <Card>
+                            <CardHeader><CardTitle>Rincian Kategori</CardTitle></CardHeader>
+                            <CardContent>
+                                <div className="space-y-5">
+                                    {categoryData.length > 0 ? categoryData.map((cat, index) => (
+                                        <div key={cat.name} className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                                    <span className="font-medium">{cat.name}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="font-bold block">{cat.percent.toFixed(1)}%</span>
+                                                    <span className="text-xs text-slate-500">{displayMoney(cat.value, isPrivacyMode)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${cat.percent}%`, backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="text-center text-slate-500 py-4">Belum ada pengeluaran</div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            );
+        }
 
         function AIAdvisor({ transactions, budgets, goals, apiKey, onOpenSettings }) {
             const [advice, setAdvice] = useState("");
             const [isLoading, setIsLoading] = useState(false);
 
             const generateAdvice = async () => {
-                if (!apiKey) {
-                    toast.error("API Key belum diatur. Silakan buka pengaturan.");
-                    onOpenSettings();
-                    return;
-                }
-
+                if (!apiKey) { toast.error("API Key belum diatur."); onOpenSettings(); return; }
                 setIsLoading(true);
                 try {
                     const model = getGeminiModel(apiKey);
-                    if (!model) throw new Error("Failed to initialize model");
-
-                    const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-                    const totalExpenses = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-                    const topCategories = Object.entries(transactions.filter(t => t.type === "expense").reduce((acc, t) => {
-                        acc[t.category] = (acc[t.category] || 0) + t.amount;
-                        return acc;
-                    }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([cat, amount]) => `${cat}: ${formatIDR(amount)}`).join(", ");
-
-                    const prompt = `
-                        Bertindaklah sebagai penasihat keuangan pribadi yang ramah dan bijaksana untuk aplikasi "Sona".
-                        Analisis data keuangan berikut dan berikan:
-                        1. Ringkasan singkat kondisi keuangan saat ini.
-                        2. Tiga saran praktis untuk berhemat atau mencapai target.
-                        
-                        Data:
-                        - Total Pemasukan: ${formatIDR(totalIncome)}
-                        - Total Pengeluaran: ${formatIDR(totalExpenses)}
-                        - Saldo: ${formatIDR(totalIncome - totalExpenses)}
-                        - Pengeluaran Terbesar: ${topCategories || "Belum ada data"}
-                        - Jumlah Target Aktif: ${goals.length}
-                        - Status Budget: ${budgets.map(b => `${b.category}: ${Math.round((b.spent/b.limit)*100)}% terpakai`).join(", ")}
-                        
-                        Gunakan bahasa Indonesia yang santai tapi profesional. Gunakan format Markdown untuk bold dan list.
-                    `;
-
+                    const prompt = `Analisis keuangan singkat dalam bahasa Indonesia. Total masuk: ${transactions.filter(t=>t.type=='income').reduce((s,t)=>s+t.amount,0)}, Keluar: ${transactions.filter(t=>t.type=='expense').reduce((s,t)=>s+t.amount,0)}. Beri 3 saran praktis.`;
                     const result = await model.generateContent(prompt);
-                    const response = await result.response;
-                    setAdvice(response.text());
-                } catch (error) {
-                    console.error("AI Error:", error);
-                    toast.error("Gagal mendapatkan saran AI. Periksa API Key Anda.");
-                } finally {
-                    setIsLoading(false);
-                }
+                    setAdvice(result.response.text());
+                } catch (error) { console.error(error); toast.error("Gagal memuat saran AI."); } 
+                finally { setIsLoading(false); }
             };
-
             const md = window.markdownit();
 
             return (
                 <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                                <Sparkles className="h-8 w-8 text-purple-600" /> Sona AI Advisor
-                            </h2>
-                            <p className="text-slate-500">Dapatkan wawasan cerdas tentang keuangan Anda</p>
-                        </div>
-                        <Button 
-                            onClick={generateAdvice} 
-                            disabled={isLoading}
-                            variant="ai"
-                            className="w-full md:w-auto"
-                        >
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
-                            {advice ? "Analisis Ulang" : "Analisis Keuanganku"}
-                        </Button>
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                        <div><h2 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="text-purple-600"/> AI Advisor</h2><p className="text-slate-500">Analisis cerdas keuangan Anda</p></div>
+                        <Button onClick={generateAdvice} disabled={isLoading} variant="ai">{isLoading ? <Loader2 className="animate-spin mr-2"/> : <Bot className="mr-2"/>} {advice ? "Analisis Ulang" : "Analisis Sekarang"}</Button>
                     </div>
-
-                    {!apiKey && (
-                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg flex items-center gap-3">
-                            <Key className="h-5 w-5" />
-                            <div className="text-sm">
-                                <strong>API Key Diperlukan:</strong> Untuk menggunakan fitur AI, harap masukkan Gemini API Key Anda di menu Pengaturan.
-                            </div>
-                            <Button size="sm" variant="outline" onClick={onOpenSettings} className="ml-auto bg-white border-yellow-300 hover:bg-yellow-100">Atur Key</Button>
-                        </div>
-                    )}
-
-                    <Card className="min-h-[300px] border-purple-100 shadow-md">
+                    {!apiKey && <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm mb-4">⚠️ API Key belum diatur. <button onClick={onOpenSettings} className="underline font-bold">Atur di sini</button></div>}
+                    <Card className="min-h-[200px] border-purple-100 shadow-sm">
                         <CardContent className="p-6">
-                            {isLoading ? (
-                                <div className="h-full flex flex-col items-center justify-center py-12 space-y-4 text-slate-400">
-                                    <Loader2 className="h-12 w-12 animate-spin text-purple-500" />
-                                    <p>Sedang menganalisis transaksi Anda...</p>
-                                </div>
-                            ) : advice ? (
-                                <div className="prose prose-slate max-w-none">
-                                    <div dangerouslySetInnerHTML={{ __html: md.render(advice) }} />
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center py-12 space-y-4 text-slate-400 text-center">
-                                    <div className="bg-purple-50 p-4 rounded-full">
-                                        <Lightbulb className="h-8 w-8 text-purple-500" />
-                                    </div>
-                                    <div className="max-w-md">
-                                        <h3 className="text-lg font-medium text-slate-900">Belum ada analisis</h3>
-                                        <p>Klik tombol di atas untuk membiarkan AI membaca pola pengeluaran Anda dan memberikan saran penghematan.</p>
-                                    </div>
-                                </div>
-                            )}
+                            {isLoading ? <div className="flex flex-col items-center justify-center h-40 text-slate-400"><Loader2 className="h-8 w-8 animate-spin mb-2"/>Menganalisis...</div> : 
+                             advice ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: md.render(advice) }}/> : 
+                             <div className="text-center text-slate-400 py-10"><Lightbulb className="h-10 w-10 mx-auto mb-2 opacity-50"/>Klik tombol untuk analisis AI</div>}
                         </CardContent>
                     </Card>
-
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-purple-100">
-                            <CardHeader>
-                                <CardTitle className="text-base text-purple-900">Hemat Lebih Banyak</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-purple-800">AI dapat mendeteksi langganan yang jarang digunakan atau kategori boros.</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-purple-100">
-                            <CardHeader>
-                                <CardTitle className="text-base text-purple-900">Capai Target</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-purple-800">Dapatkan strategi realistis untuk mencapai target tabungan Anda lebih cepat.</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-purple-100">
-                            <CardHeader>
-                                <CardTitle className="text-base text-purple-900">Wawasan Instan</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-purple-800">Tidak perlu menghitung manual, biarkan Sona AI merangkumnya untuk Anda.</p>
-                            </CardContent>
-                        </Card>
-                    </div>
                 </div>
             );
         }
 
-        // --- FEATURE COMPONENTS ---
+        // --- DASHBOARD ---
+        function Dashboard({ transactions, budgets, goals, isPrivacy, onNavigate }) {
+            const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
+            const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+            
+            // Calculate Monthly Cash Flow
+            const cashFlowData = useMemo(() => {
+                const months = {};
+                for(let i=5; i>=0; i--) {
+                    const d = new Date(); d.setMonth(d.getMonth() - i);
+                    const key = d.toISOString().slice(0, 7); 
+                    months[key] = { name: d.toLocaleString('id-ID', {month:'short'}), income: 0, expense: 0, net: 0 };
+                }
+                transactions.forEach(t => {
+                    const key = t.date.slice(0, 7);
+                    if(months[key]) {
+                        if(t.type === 'income') months[key].income += t.amount;
+                        else months[key].expense += t.amount;
+                    }
+                });
+                return Object.values(months).map(m => ({ ...m, net: m.income - m.expense }));
+            }, [transactions]);
 
-        // 1. DASHBOARD
-        function Dashboard({ transactions, budgets, goals }) {
-            const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-            const totalExpenses = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-            const balance = totalIncome - totalExpenses;
-
-            const categorySpending = transactions
-                .filter(t => t.type === "expense")
-                .reduce((acc, t) => {
-                    acc[t.category] = (acc[t.category] || 0) + t.amount;
-                    return acc;
-                }, {});
-
-            const pieData = Object.entries(categorySpending).map(([name, value]) => ({ name, value }));
-            const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
-
-            // Mock monthly data
-            const monthlyData = useMemo(() => Array.from({ length: 6 }, (_, i) => {
-                const d = new Date();
-                d.setMonth(d.getMonth() - (5 - i));
-                return {
-                    month: d.toLocaleString("id-ID", { month: "short" }),
-                    income: Math.floor(Math.random() * 5000000) + 3000000,
-                    expenses: Math.floor(Math.random() * 4000000) + 2000000,
-                };
-            }), []);
+            const recentTransactions = useMemo(() => [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5), [transactions]);
 
             return (
                 <div className="space-y-6">
-                    <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Ringkasan Keuangan</h2>
-                        <p className="text-slate-500">Gambaran umum keuangan Anda</p>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium opacity-90">Saldo</CardTitle>
-                                <WalletIcon className="h-4 w-4 opacity-90" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatIDR(balance)}</div>
-                                <p className="text-xs opacity-80">{balance >= 0 ? "Keuangan sehat" : "Perlu perhatian"}</p>
-                            </CardContent>
+                    <div><h2 className="text-2xl font-bold truncate">Ringkasan</h2><p className="text-slate-500">Overview keuangan</p></div>
+                    
+                    {/* Summary Cards */}
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        <Card className="bg-blue-600 text-white border-0 shadow-lg">
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium opacity-90 truncate">Saldo</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold truncate">{displayMoney(income - expense, isPrivacy)}</div></CardContent>
                         </Card>
-                        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium opacity-90">Pemasukan</CardTitle>
-                                <TrendingUp className="h-4 w-4 opacity-90" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatIDR(totalIncome)}</div>
-                            </CardContent>
+                        <Card className="bg-green-600 text-white border-0 shadow-lg">
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium opacity-90 truncate">Pemasukan</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold truncate">{displayMoney(income, isPrivacy)}</div></CardContent>
                         </Card>
-                        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium opacity-90">Pengeluaran</CardTitle>
-                                <TrendingDown className="h-4 w-4 opacity-90" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatIDR(totalExpenses)}</div>
-                            </CardContent>
+                        <Card className="bg-red-600 text-white border-0 shadow-lg">
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium opacity-90 truncate">Pengeluaran</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold truncate">{displayMoney(expense, isPrivacy)}</div></CardContent>
                         </Card>
-                        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium opacity-90">Target</CardTitle>
-                                <Target className="h-4 w-4 opacity-90" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{goals.length}</div>
-                                <p className="text-xs opacity-80">Target aktif</p>
-                            </CardContent>
+                        <Card className="bg-purple-600 text-white border-0 shadow-lg">
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium opacity-90 truncate">Target</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold truncate">{goals.length} Aktif</div></CardContent>
                         </Card>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Cash Flow Chart */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Pengeluaran per Kategori</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle>Arus Kas Bulanan (Net)</CardTitle></CardHeader>
                             <CardContent>
-                                <div className="h-[300px] w-full">
-                                    {pieData.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                                    {pieData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <RechartsTooltip formatter={(value) => formatIDR(value)} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-400">Belum ada data pengeluaran</div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Tren Bulanan (Simulasi)</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[300px] w-full">
+                                <div className="h-[250px]">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={monthlyData}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="month" />
-                                            <YAxis tickFormatter={(val) => `${val/1000000}jt`} />
-                                            <RechartsTooltip formatter={(value) => formatIDR(value)} />
-                                            <Legend />
-                                            <Line type="monotone" dataKey="income" stroke="#22c55e" name="Pemasukan" strokeWidth={2} />
-                                            <Line type="monotone" dataKey="expenses" stroke="#ef4444" name="Pengeluaran" strokeWidth={2} />
-                                        </LineChart>
+                                        <BarChart data={cashFlowData}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                                            <YAxis hide />
+                                            <RechartsTooltip cursor={{fill: 'transparent'}} formatter={(val) => displayMoney(val, isPrivacy)} contentStyle={{borderRadius: '8px'}} />
+                                            <ReferenceLine y={0} stroke="#000" />
+                                            <Bar dataKey="net" name="Net Cash Flow" radius={[4, 4, 0, 0]}>
+                                                {cashFlowData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#22c55e' : '#ef4444'} />)}
+                                            </Bar>
+                                        </BarChart>
                                     </ResponsiveContainer>
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Recent Transactions */}
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle>Riwayat Transaksi</CardTitle>
+                                <Button variant="ghost" size="sm" onClick={() => onNavigate('transactions')} className="text-xs">Lihat Semua <ArrowRight className="ml-1 h-3 w-3" /></Button>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {recentTransactions.length > 0 ? (
+                                        recentTransactions.map((t) => (
+                                            <div key={t.id} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={cn("p-2 rounded-full shrink-0", t.type === 'income' ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600")}>
+                                                        {t.type === 'income' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-sm truncate">{t.description}</p>
+                                                        <p className="text-xs text-slate-500 truncate">{t.category} • {new Date(t.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={cn("font-semibold text-sm whitespace-nowrap", t.type === 'income' ? "text-green-600" : "text-red-600")}>
+                                                    {t.type === 'income' ? '+' : '-'}{displayMoney(t.amount, isPrivacy)}
+                                                </span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center text-slate-400 py-8 text-sm">Belum ada transaksi</div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             );
         }
 
-        // 2. RECEIPT SCANNER (AI POWERED)
-        function ReceiptScanner({ onScanComplete, categories, apiKey, onOpenSettings }) {
-            const [isScanning, setIsScanning] = useState(false);
-            
-            const handleScan = async (e) => {
-                if (!apiKey) {
-                    toast.error("API Key belum diatur.");
-                    onOpenSettings();
-                    e.target.value = null; // reset
-                    return;
-                }
-
-                const file = e.target.files?.[0];
-                if (!file) return;
-                
-                setIsScanning(true);
-                toast.info("Sedang memproses struk dengan AI...");
-
+        function ReceiptScanner({ onScan, apiKey, onSettings }) {
+            const [loading, setLoading] = useState(false);
+            const handleFile = async (e) => {
+                if(!apiKey) { toast.error("Perlu API Key"); onSettings(); return; }
+                const file = e.target.files?.[0]; if(!file) return;
+                setLoading(true);
                 try {
                     const model = getGeminiModel(apiKey);
-                    if (!model) throw new Error("No model");
-
-                    const imagePart = await fileToGenerativePart(file);
-                    
-                    const prompt = `
-                        Analisis gambar struk belanja ini. Ekstrak informasi berikut dalam format JSON valid (tanpa markdown):
-                        {
-                            "amount": number (total bayar dalam angka, hilangkan 'Rp' atau titik/koma ribuan),
-                            "description": string (nama toko atau merchant, gunakan Title Case),
-                            "date": string (tanggal transaksi format YYYY-MM-DD, jika tidak ada gunakan hari ini),
-                            "category": string (pilih satu yang paling relevan dari daftar ini: ${categories.join(", ")}, atau "Lainnya" jika tidak ada yang cocok)
-                        }
-                    `;
-
-                    const result = await model.generateContent([prompt, imagePart]);
-                    const text = result.response.text().replace(/```json|```/g, "").trim();
-                    const data = JSON.parse(text);
-
-                    // Validate data
-                    const amount = parseFloat(data.amount) || 0;
-                    const desc = data.description || "Struk Belanja";
-                    const cat = categories.includes(data.category) ? data.category : "Lainnya";
-                    const date = data.date || new Date().toISOString().split("T")[0];
-
-                    onScanComplete(amount, desc, cat, date);
-                    
-                } catch (error) {
-                    console.error("Scan Error:", error);
-                    toast.error("Gagal memindai struk. Pastikan API Key benar dan gambar jelas.");
-                } finally {
-                    setIsScanning(false);
-                    // Reset file input
-                    e.target.value = null;
-                }
+                    const img = await fileToGenerativePart(file);
+                    const res = await model.generateContent(["Extract JSON: {amount:number, description:string, category:string, date:YYYY-MM-DD}", img]);
+                    const data = JSON.parse(res.response.text().replace(/```json|```/g, ""));
+                    onScan(data.amount, data.description, data.category, data.date);
+                } catch(e) { console.error(e); toast.error("Gagal scan struk"); }
+                finally { setLoading(false); e.target.value = null; }
             };
-
             return (
-                <Card className="border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden relative">
-                    {isScanning && (
-                         <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center flex-col gap-2 backdrop-blur-sm">
-                            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                            <p className="text-sm font-medium text-purple-700 animate-pulse">Gemini sedang membaca struk...</p>
+                <Card className="border-dashed border-2 bg-slate-50 mb-6">
+                    <CardContent className="p-6 flex flex-col items-center text-center">
+                        <div className="bg-white p-3 rounded-full mb-3 shadow-sm relative">
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin text-purple-600"/> : <Camera className="h-6 w-6 text-purple-600"/>}
                         </div>
-                    )}
-                    <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-                        <div className="rounded-full bg-white p-4 shadow-sm relative group">
-                            <div className="absolute inset-0 bg-purple-100 rounded-full scale-0 group-hover:scale-110 transition-transform duration-300"></div>
-                            <Camera className="h-8 w-8 text-purple-600 relative z-10" />
+                        <h3 className="font-semibold text-sm">AI Scan Struk</h3>
+                        <p className="text-xs text-slate-500 mb-3">Upload foto struk belanja</p>
+                        <div className="relative">
+                            <input type="file" accept="image/*" onChange={handleFile} disabled={loading} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                            <Button disabled={loading} size="sm" className="w-full">Pilih Foto</Button>
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-slate-900">AI Scan Struk</h3>
-                            <p className="text-sm text-slate-500 mt-1">Upload foto struk, biarkan AI mengisi data.</p>
-                        </div>
-                        <div className="relative w-full max-w-xs mx-auto">
-                            <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" onChange={handleScan} disabled={isScanning} />
-                            <Button disabled={isScanning} className="w-full bg-white text-slate-900 border hover:bg-slate-50">
-                                Pilih Foto
-                            </Button>
-                        </div>
-                        {!apiKey && <p className="text-xs text-red-500">*Butuh API Key</p>}
                     </CardContent>
                 </Card>
             );
         }
 
-        // 3. TRANSACTIONS
-        function Transactions({ transactions, wallets, onAddTransaction, onDeleteTransaction, categories, apiKey, onOpenSettings }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const [type, setType] = useState("expense");
-            const [amount, setAmount] = useState("");
-            const [category, setCategory] = useState(categories[0]);
-            const [description, setDescription] = useState("");
-            const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-            const [walletId, setWalletId] = useState(wallets[0]?.id || "");
-            const [filterType, setFilterType] = useState("all");
-            
-            // AI Smart Input State
+        function Transactions({ transactions, wallets, onAdd, onDelete, categories, apiKey, onSettings, isPrivacy }) {
+            const [isOpen, setOpen] = useState(false);
+            const [form, setForm] = useState({ type: 'expense', amount: '', category: categories[0], description: '', date: new Date().toISOString().split('T')[0], walletId: wallets[0]?.id });
             const [smartInput, setSmartInput] = useState("");
-            const [isSmartProcessing, setIsSmartProcessing] = useState(false);
+            const [smartLoading, setSmartLoading] = useState(false);
 
-            const handleSmartProcess = async () => {
-                if (!smartInput.trim()) return;
-                
-                if (!apiKey) {
-                    toast.error("API Key belum diatur.");
-                    onOpenSettings();
-                    return;
-                }
-
-                setIsSmartProcessing(true);
+            const handleSmart = async () => {
+                if(!apiKey) { toast.error("Perlu API Key"); onSettings(); return; }
+                if(!smartInput) return;
+                setSmartLoading(true);
                 try {
                     const model = getGeminiModel(apiKey);
-                    if (!model) throw new Error("No model");
-
-                    const prompt = `
-                        Extract transaction details from this text: '${smartInput}'. 
-                        Return JSON string only (no markdown) with keys: 
-                        - amount (number, clean without currency symbols)
-                        - category (best match from: ${categories.join(', ')} or 'Lainnya')
-                        - description (string, capitalized)
-                        
-                        Example input: "Makan bakso 15rb" -> {"amount": 15000, "category": "Makanan & Minuman", "description": "Makan Bakso"}
-                    `;
-                    const result = await model.generateContent(prompt);
-                    const text = result.response.text().replace(/```json|```/g, "").trim();
-                    const data = JSON.parse(text);
-                    
-                    if (data.amount) setAmount(data.amount);
-                    if (data.category) setCategory(data.category);
-                    if (data.description) setDescription(data.description);
-                    
-                    setSmartInput("");
-                    toast.success("Data diisi otomatis oleh AI! ✨");
-                } catch (e) {
-                    console.error(e);
-                    toast.error("Gagal memproses input pintar. Cek API Key.");
-                } finally {
-                    setIsSmartProcessing(false);
-                }
+                    const res = await model.generateContent(`Parse transaction JSON {amount:number, category:string (from [${categories}]), description:string} from: "${smartInput}"`);
+                    const data = JSON.parse(res.response.text().replace(/```json|```/g, ""));
+                    setForm(prev => ({ ...prev, ...data }));
+                    toast.success("Terisi otomatis!"); setSmartInput("");
+                } catch(e) { toast.error("Gagal memproses"); } finally { setSmartLoading(false); }
             };
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                if (!amount || !description || !walletId) return;
-                onAddTransaction({ type, amount: parseFloat(amount), category, description, date, walletId });
-                setAmount(""); setDescription(""); setIsOpen(false);
+                onAdd({ ...form, amount: parseFloat(form.amount) });
+                setOpen(false); setForm({ ...form, amount: '', description: '' });
             };
-
-            const handleScanResult = (scannedAmount, scannedDesc, scannedCat, scannedDate) => {
-                setAmount(scannedAmount);
-                setDescription(scannedDesc);
-                setCategory(scannedCat);
-                if(scannedDate) setDate(scannedDate);
-                setType("expense");
-                setIsOpen(true);
-                toast.success("Struk berhasil dipindai! Silakan cek kembali.");
-            };
-
-            const filtered = transactions
-                .filter(t => filterType === "all" || t.type === filterType)
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
 
             return (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Transaksi</h2>
-                            <p className="text-slate-500">Lacak pemasukan dan pengeluaran</p>
-                        </div>
-                        <Button onClick={() => setIsOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 border-0">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah
-                        </Button>
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold truncate">Transaksi</h2>
+                        <Button onClick={() => setOpen(true)} size="sm"><Plus className="h-4 w-4 mr-2"/>Tambah</Button>
                     </div>
-
-                    <ReceiptScanner onScanComplete={handleScanResult} categories={categories} apiKey={apiKey} onOpenSettings={onOpenSettings} />
-
-                    <div className="flex gap-4 mb-4 overflow-x-auto pb-2">
-                         <Button variant={filterType === "all" ? "default" : "outline"} onClick={() => setFilterType("all")} size="sm">Semua</Button>
-                         <Button variant={filterType === "income" ? "default" : "outline"} onClick={() => setFilterType("income")} size="sm">Pemasukan</Button>
-                         <Button variant={filterType === "expense" ? "default" : "outline"} onClick={() => setFilterType("expense")} size="sm">Pengeluaran</Button>
-                    </div>
+                    
+                    <ReceiptScanner onScan={(a,d,c,dt) => { setForm(f=>({...f, amount:a, description:d, category:c, date:dt})); setOpen(true); }} apiKey={apiKey} onSettings={onSettings} />
 
                     <div className="space-y-3">
-                        {filtered.length > 0 ? filtered.map((t) => {
-                            const wallet = wallets.find(w => w.id === t.walletId);
-                            return (
-                                <Card key={t.id} className="hover:shadow-md transition-shadow">
-                                    <CardContent className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className={cn("p-2.5 rounded-xl flex-shrink-0", t.type === "income" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600")}>
-                                                {t.type === "income" ? <ArrowDownCircle className="h-5 w-5" /> : <ArrowUpCircle className="h-5 w-5" />}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h4 className="font-semibold truncate">{t.description}</h4>
-                                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                                                    <Badge variant="secondary" className="text-[10px] h-5">{t.category}</Badge>
-                                                    <span>• {new Date(t.date).toLocaleDateString("id-ID")}</span>
-                                                    {wallet && <span>• {wallet.name}</span>}
-                                                </div>
-                                            </div>
+                        {transactions.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t => (
+                            <Card key={t.id} className="hover:shadow-md transition-shadow">
+                                <CardContent className="p-4 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className={cn("p-2 rounded-lg shrink-0", t.type==='income'?"bg-green-100 text-green-600":"bg-red-100 text-red-600")}>
+                                            {t.type==='income'?<ArrowDownCircle size={20}/>:<ArrowUpCircle size={20}/>}
                                         </div>
-                                        <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                                            <span className={cn("font-bold whitespace-nowrap", t.type === "income" ? "text-green-600" : "text-red-600")}>
-                                                {t.type === "income" ? "+" : "-"}{formatIDR(t.amount)}
-                                            </span>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => onDeleteTransaction(t.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-semibold truncate text-sm sm:text-base">{t.description}</div>
+                                            <div className="text-xs text-slate-500 truncate">{t.category} • {t.date}</div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        }) : (
-                            <div className="text-center py-12 text-slate-500">Belum ada transaksi.</div>
-                        )}
-                    </div>
-
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                        <div className="space-y-4">
-                            <h2 className="text-lg font-semibold">Tambah Transaksi</h2>
-                            
-                            {/* AI Smart Input */}
-                            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg border border-purple-100 mb-4">
-                                <Label className="text-purple-700 flex items-center gap-2 mb-2"><Sparkles className="h-3 w-3" /> Input Cerdas AI</Label>
-                                <div className="flex gap-2">
-                                    <Input 
-                                        value={smartInput} 
-                                        onChange={(e) => setSmartInput(e.target.value)} 
-                                        placeholder="Contoh: 'Beli kopi 25rb'" 
-                                        className="bg-white"
-                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSmartProcess())}
-                                    />
-                                    <Button 
-                                        type="button" 
-                                        onClick={handleSmartProcess} 
-                                        disabled={isSmartProcessing || !smartInput}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                                    >
-                                        {isSmartProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-                                <p className="text-[10px] text-purple-600/70 mt-1">
-                                    {!apiKey ? <span className="text-red-500">API Key belum diatur!</span> : "Ketik transaksi Anda dan biarkan AI mengisinya untuk Anda."}
-                                </p>
-                            </div>
-
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="flex gap-2">
-                                    <Button type="button" className={cn("flex-1", type === "expense" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-white text-slate-900 border")} onClick={() => setType("expense")}>Pengeluaran</Button>
-                                    <Button type="button" className={cn("flex-1", type === "income" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-white text-slate-900 border")} onClick={() => setType("income")}>Pemasukan</Button>
-                                </div>
-                                <div>
-                                    <Label>Dompet</Label>
-                                    <Select value={walletId} onValueChange={setWalletId}>
-                                        {wallets.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label>Jumlah</Label>
-                                    <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" required />
-                                </div>
-                                <div>
-                                    <Label>Kategori</Label>
-                                    <Select value={category} onValueChange={setCategory}>
-                                        {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label>Keterangan</Label>
-                                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Makan siang..." required />
-                                </div>
-                                <div>
-                                    <Label>Tanggal</Label>
-                                    <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
-                                </div>
-                                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Simpan</Button>
-                            </form>
-                        </div>
-                    </Dialog>
-                </div>
-            );
-        }
-
-        // 4. WALLETS
-        function Wallets({ wallets, transactions, onAddWallet, onDeleteWallet }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const [name, setName] = useState("");
-            const [balance, setBalance] = useState("");
-            const [color, setColor] = useState("bg-blue-500");
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (!name) return;
-                onAddWallet({ name, balance: parseFloat(balance) || 0, color, icon: "wallet" });
-                setIsOpen(false); setName(""); setBalance("");
-            };
-
-            const getBalance = (w) => {
-                const txs = transactions.filter(t => t.walletId === w.id);
-                const inc = txs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-                const exp = txs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-                return w.balance + inc - exp;
-            };
-
-            const COLORS = ["bg-blue-500", "bg-green-500", "bg-orange-500", "bg-purple-500", "bg-pink-500", "bg-slate-800"];
-
-            return (
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Dompet Saya</h2>
-                            <p className="text-slate-500">Kelola sumber dana Anda</p>
-                        </div>
-                        <Button onClick={() => setIsOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 border-0">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah
-                        </Button>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {wallets.map(w => (
-                            <Card key={w.id} className={cn("text-white border-0 shadow-lg relative overflow-hidden", w.color)}>
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
-                                <CardHeader className="pb-2 relative z-10">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <WalletIcon className="h-5 w-5" />
-                                            <CardTitle className="text-lg">{w.name}</CardTitle>
-                                        </div>
-                                        <button onClick={() => onDeleteWallet(w.id)} className="text-white/70 hover:text-white"><Trash2 className="h-4 w-4"/></button>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="relative z-10">
-                                    <p className="text-sm opacity-80">Saldo Saat Ini</p>
-                                    <p className="text-3xl font-bold mt-1">{formatIDR(getBalance(w))}</p>
-                                    <p className="text-xs opacity-60 mt-4 border-t border-white/20 pt-2">Saldo Awal: {formatIDR(w.balance)}</p>
+                                    <div className="text-right shrink-0">
+                                        <div className={cn("font-bold text-sm sm:text-base whitespace-nowrap", t.type==='income'?"text-green-600":"text-red-600")}>
+                                            {t.type==='income'?'+':'-'}{displayMoney(t.amount, isPrivacy)}
+                                        </div>
+                                        <button onClick={()=>onDelete(t.id)} className="text-xs text-red-400 mt-1 hover:underline">Hapus</button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
 
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                    <Dialog open={isOpen} onOpenChange={setOpen}>
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold">Tambah Dompet</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <Label>Nama Dompet</Label>
-                                    <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. BCA, GoPay" required />
+                            <h2 className="font-bold text-lg">Transaksi Baru</h2>
+                            <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                                <Label className="text-purple-700 text-xs flex gap-1 mb-2"><Sparkles size={12}/> AI Smart Input</Label>
+                                <div className="flex gap-2">
+                                    <Input value={smartInput} onChange={e=>setSmartInput(e.target.value)} placeholder="Contoh: Beli bakso 15rb" className="h-8 text-sm"/>
+                                    <Button size="sm" onClick={handleSmart} disabled={smartLoading} className="h-8 px-2 bg-purple-600">{smartLoading?<Loader2 className="animate-spin"/>:<Sparkles size={14}/>}</Button>
                                 </div>
-                                <div>
-                                    <Label>Saldo Awal</Label>
-                                    <Input type="number" value={balance} onChange={e => setBalance(e.target.value)} placeholder="0" />
+                            </div>
+                            <form onSubmit={handleSubmit} className="space-y-3">
+                                <div className="flex gap-2">
+                                    <Button type="button" onClick={()=>setForm({...form, type:'expense'})} variant={form.type==='expense'?'default':'outline'} className={cn("flex-1", form.type==='expense'&&"bg-red-600")}>Pengeluaran</Button>
+                                    <Button type="button" onClick={()=>setForm({...form, type:'income'})} variant={form.type==='income'?'default':'outline'} className={cn("flex-1", form.type==='income'&&"bg-green-600")}>Pemasukan</Button>
                                 </div>
-                                <div>
-                                    <Label>Warna Kartu</Label>
-                                    <div className="flex gap-2 mt-2">
-                                        {COLORS.map(c => (
-                                            <button key={c} type="button" className={cn("w-6 h-6 rounded-full", c, color === c && "ring-2 ring-offset-2 ring-slate-900")} onClick={() => setColor(c)} />
-                                        ))}
-                                    </div>
-                                </div>
-                                <Button type="submit" className="w-full bg-blue-600">Simpan</Button>
+                                <div className="space-y-1"><Label>Dompet</Label><Select value={form.walletId} onValueChange={v=>setForm({...form, walletId:v})}>{wallets.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</Select></div>
+                                <div className="space-y-1"><Label>Jumlah</Label><Input type="number" value={form.amount} onChange={e=>setForm({...form, amount:e.target.value})} required/></div>
+                                <div className="space-y-1"><Label>Kategori</Label><Select value={form.category} onValueChange={v=>setForm({...form, category:v})}>{categories.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</Select></div>
+                                <div className="space-y-1"><Label>Ket.</Label><Input value={form.description} onChange={e=>setForm({...form, description:e.target.value})} required/></div>
+                                <div className="space-y-1"><Label>Tgl</Label><Input type="date" value={form.date} onChange={e=>setForm({...form, date:e.target.value})} required/></div>
+                                <Button type="submit" className="w-full">Simpan</Button>
                             </form>
                         </div>
                     </Dialog>
@@ -964,457 +580,196 @@
             );
         }
 
-        // 5. BUDGETS
-        function Budgets({ budgets, onAddBudget, onDeleteBudget, categories }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const [category, setCategory] = useState("");
-            const [limit, setLimit] = useState("");
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (!category || !limit) return;
-                onAddBudget({ category, limit: parseFloat(limit), color: "#3b82f6" });
-                setIsOpen(false); setCategory(""); setLimit("");
-            };
-
-            const availCats = categories.filter(c => !budgets.find(b => b.category === c));
-
-            return (
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Anggaran</h2>
-                            <p className="text-slate-500">Batasi pengeluaran bulanan</p>
-                        </div>
-                        <Button onClick={() => setIsOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 border-0" disabled={availCats.length === 0}>
-                            <Plus className="mr-2 h-4 w-4" /> Buat Anggaran
-                        </Button>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {budgets.map(b => {
-                            const pct = (b.spent / b.limit) * 100;
-                            const isOver = pct > 100;
-                            return (
-                                <Card key={b.id}>
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-center gap-2">
-                                            <CardTitle className="text-lg truncate">{b.category}</CardTitle>
-                                            <button onClick={() => onDeleteBudget(b.id)} className="text-slate-400 hover:text-red-500 shrink-0"><Trash2 className="h-4 w-4"/></button>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 pt-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Terpakai: {formatIDR(b.spent)}</span>
-                                            <span className="font-medium">Batas: {formatIDR(b.limit)}</span>
-                                        </div>
-                                        <Progress value={Math.min(pct, 100)} className={cn("h-2", isOver ? "bg-red-100" : "bg-slate-100")} />
-                                        <div className="flex items-center gap-2 text-sm">
-                                            {isOver ? <AlertCircle className="h-4 w-4 text-red-500 shrink-0" /> : <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
-                                            <span className={isOver ? "text-red-600 truncate" : "text-green-600 truncate"}>
-                                                {isOver ? `Over budget (${pct.toFixed(0)}%)` : `Sisa ${formatIDR(b.limit - b.spent)}`}
-                                            </span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                    
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                        <div className="space-y-4">
-                            <h2 className="text-lg font-semibold">Buat Anggaran</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <Label>Kategori</Label>
-                                    <Select value={category} onValueChange={setCategory}>
-                                        <SelectItem value="">Pilih Kategori</SelectItem>
-                                        {availCats.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label>Batas Bulanan (Rp)</Label>
-                                    <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} required />
-                                </div>
-                                <Button type="submit" className="w-full bg-blue-600">Simpan</Button>
-                            </form>
-                        </div>
-                    </Dialog>
-                </div>
-            );
-        }
-
-        // 6. GOALS
-        function Goals({ goals, onAddGoal, onUpdateGoal, onDeleteGoal }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const [contribOpen, setContribOpen] = useState(false);
-            const [selectedGoal, setSelectedGoal] = useState(null);
-            const [name, setName] = useState("");
-            const [target, setTarget] = useState("");
-            const [contrib, setContrib] = useState("");
-            const [deadline, setDeadline] = useState("");
-
-            const handleAdd = (e) => {
-                e.preventDefault();
-                onAddGoal({ name, targetAmount: parseFloat(target), deadline });
-                setIsOpen(false); setName(""); setTarget(""); setDeadline("");
-            };
-
-            const handleContrib = (e) => {
-                e.preventDefault();
-                if(selectedGoal) {
-                    onUpdateGoal(selectedGoal.id, selectedGoal.currentAmount + parseFloat(contrib));
-                    setContribOpen(false); setContrib(""); setSelectedGoal(null);
-                }
-            };
-
-            return (
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Target Keuangan</h2>
-                            <p className="text-slate-500">Wujudkan impian finansial Anda</p>
-                        </div>
-                        <Button onClick={() => setIsOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 border-0">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah Target
-                        </Button>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {goals.map(g => {
-                            const pct = (g.currentAmount / g.targetAmount) * 100;
-                            const isDone = pct >= 100;
-                            return (
-                                <Card key={g.id} className="relative overflow-hidden">
-                                    {isDone && <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>}
-                                    <CardHeader className="flex flex-row items-start justify-between pb-2 gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <CardTitle className="text-lg truncate">{g.name}</CardTitle>
-                                            <p className="text-xs text-slate-500 mt-1">Target: {formatIDR(g.targetAmount)}</p>
-                                        </div>
-                                        <button onClick={() => onDeleteGoal(g.id)} className="text-slate-400 hover:text-red-500 shrink-0"><Trash2 className="h-4 w-4"/></button>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-2xl font-bold">{formatIDR(g.currentAmount)}</span>
-                                            <span className="text-sm text-slate-500 mb-1">{pct.toFixed(0)}%</span>
-                                        </div>
-                                        <Progress value={Math.min(pct, 100)} className={cn("h-2", isDone && "bg-green-100")} />
-                                        
-                                        {!isDone && (
-                                            <Button variant="outline" className="w-full text-xs h-8" onClick={() => { setSelectedGoal(g); setContribOpen(true); }}>
-                                                <TrendingUp className="mr-2 h-3 w-3" /> Tambah Tabungan
-                                            </Button>
-                                        )}
-                                        {isDone && <div className="text-center text-sm text-green-600 font-medium py-1 bg-green-50 rounded">Tercapai! 🎉</div>}
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                        <div className="space-y-4">
-                            <h2 className="text-lg font-semibold">Target Baru</h2>
-                            <form onSubmit={handleAdd} className="space-y-4">
-                                <div><Label>Nama Target</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Liburan, Gadget..." required /></div>
-                                <div><Label>Nominal Target</Label><Input type="number" value={target} onChange={e => setTarget(e.target.value)} required /></div>
-                                <div><Label>Tenggat Waktu</Label><Input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required /></div>
-                                <Button type="submit" className="w-full bg-blue-600">Buat Target</Button>
-                            </form>
-                        </div>
-                    </Dialog>
-
-                    <Dialog open={contribOpen} onOpenChange={setContribOpen}>
-                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold">Nabung untuk {selectedGoal?.name}</h2>
-                            <form onSubmit={handleContrib} className="space-y-4">
-                                <div><Label>Jumlah (Rp)</Label><Input type="number" value={contrib} onChange={e => setContrib(e.target.value)} required /></div>
-                                <Button type="submit" className="w-full bg-green-600">Simpan</Button>
-                            </form>
-                        </div>
-                    </Dialog>
-                </div>
-            );
-        }
-
-        // --- MAIN APP COMPONENT ---
-        const CATEGORIES = ["Makanan & Minuman", "Transportasi", "Belanja", "Hiburan", "Tagihan", "Kesehatan", "Pendidikan", "Gaji", "Investasi", "Lainnya"];
-
+        // --- MAIN APP ---
         function App() {
-            const [activeTab, setActiveTab] = useState("dashboard");
-            const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-            const fileInputRef = useRef(null);
+            const [tab, setTab] = useState("dashboard");
+            const [mobileMenu, setMobileMenu] = useState(false);
+            const [settingsOpen, setSettingsOpen] = useState(false);
             
-            // STATE
-            const [wallets, setWallets] = useState(() => {
-                const s = localStorage.getItem("sona-wallets");
-                return s ? JSON.parse(s) : [{ id: "w1", name: "Dompet Tunai", balance: 0, color: "bg-orange-500", icon: "cash" }];
-            });
-            const [transactions, setTransactions] = useState(() => {
-                const s = localStorage.getItem("sona-transactions");
-                return s ? JSON.parse(s) : [];
-            });
-            const [budgets, setBudgets] = useState(() => {
-                const s = localStorage.getItem("sona-budgets");
-                return s ? JSON.parse(s) : [];
-            });
-            const [goals, setGoals] = useState(() => {
-                const s = localStorage.getItem("sona-goals");
-                return s ? JSON.parse(s) : [];
-            });
-            const [apiKey, setApiKey] = useState(() => {
-                return localStorage.getItem("sona_api_key") || "";
-            });
+            // --- PRIVACY STATE (New) ---
+            const [isPrivacy, setPrivacy] = useState(false);
+            
+            // Data State
+            const [wallets, setWallets] = useState(() => JSON.parse(localStorage.getItem("sona-wallets") || '[{"id":"w1","name":"Tunai","balance":0,"color":"bg-blue-500","icon":"cash"}]'));
+            const [trx, setTrx] = useState(() => JSON.parse(localStorage.getItem("sona-trx") || '[]'));
+            const [budgets, setBudgets] = useState(() => JSON.parse(localStorage.getItem("sona-budgets") || '[]'));
+            const [goals, setGoals] = useState(() => JSON.parse(localStorage.getItem("sona-goals") || '[]'));
+            const [apiKey, setApiKey] = useState(() => localStorage.getItem("sona_api_key") || "");
 
-            // PERSISTENCE
-            useEffect(() => localStorage.setItem("sona-wallets", JSON.stringify(wallets)), [wallets]);
-            useEffect(() => localStorage.setItem("sona-transactions", JSON.stringify(transactions)), [transactions]);
-            useEffect(() => localStorage.setItem("sona-budgets", JSON.stringify(budgets)), [budgets]);
-            useEffect(() => localStorage.setItem("sona-goals", JSON.stringify(goals)), [goals]);
-            useEffect(() => localStorage.setItem("sona_api_key", apiKey), [apiKey]);
+            // Persist
+            useEffect(() => { localStorage.setItem("sona-wallets", JSON.stringify(wallets)); }, [wallets]);
+            useEffect(() => { localStorage.setItem("sona-trx", JSON.stringify(trx)); }, [trx]);
+            useEffect(() => { localStorage.setItem("sona-budgets", JSON.stringify(budgets)); }, [budgets]);
+            useEffect(() => { localStorage.setItem("sona-goals", JSON.stringify(goals)); }, [goals]);
+            useEffect(() => { localStorage.setItem("sona_api_key", apiKey); }, [apiKey]);
 
-            // ACTIONS
-            const addTx = (t) => {
-                setTransactions(prev => [...prev, { ...t, id: Date.now().toString() }]);
-                if(t.type === 'expense') {
-                    setBudgets(prev => prev.map(b => b.category === t.category ? { ...b, spent: b.spent + t.amount } : b));
-                }
-                toast.success("Transaksi berhasil");
+            // Handlers
+            const addTrx = (t) => { const nt={...t, id: Date.now().toString()}; setTrx([...trx, nt]); if(t.type==='expense') setBudgets(bs=>bs.map(b=>b.category===t.category?{...b, spent:b.spent+t.amount}:b)); toast.success("Disimpan"); };
+            const delTrx = (id) => { const t = trx.find(x=>x.id===id); if(t?.type==='expense') setBudgets(bs=>bs.map(b=>b.category===t.category?{...b, spent: Math.max(0, b.spent-t.amount)}:b)); setTrx(x=>x.filter(i=>i.id!==id)); toast.success("Dihapus"); };
+            const exportData = () => {
+                const blob = new Blob([JSON.stringify({wallets, trx, budgets, goals})], {type: "application/json"});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `sona-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
             };
-            const delTx = (id) => {
-                const t = transactions.find(tx => tx.id === id);
-                if(t && t.type === 'expense') {
-                    setBudgets(prev => prev.map(b => b.category === t.category ? { ...b, spent: Math.max(0, b.spent - t.amount) } : b));
-                }
-                setTransactions(prev => prev.filter(tx => tx.id !== id));
-                toast.success("Dihapus");
-            };
-            const addWallet = (w) => { setWallets(prev => [...prev, { ...w, id: "w"+Date.now() }]); toast.success("Dompet dibuat"); };
-            const delWallet = (id) => {
-                if(transactions.some(t => t.walletId === id)) return toast.error("Dompet ada transaksi!");
-                setWallets(prev => prev.filter(w => w.id !== id));
-                toast.success("Dompet dihapus");
-            };
-            const addBudget = (b) => {
-                const spent = transactions.filter(t => t.type === 'expense' && t.category === b.category).reduce((s,t) => s + t.amount, 0);
-                setBudgets(prev => [...prev, { ...b, id: Date.now().toString(), spent }]);
-                toast.success("Anggaran dibuat");
-            };
-            const delBudget = (id) => { setBudgets(prev => prev.filter(b => b.id !== id)); toast.success("Anggaran dihapus"); };
-            const addGoal = (g) => { setGoals(prev => [...prev, { ...g, id: Date.now().toString(), currentAmount: 0 }]); toast.success("Target dibuat"); };
-            const updateGoal = (id, amt) => { setGoals(prev => prev.map(g => g.id === id ? { ...g, currentAmount: amt } : g)); toast.success("Berhasil menabung!"); };
-            const delGoal = (id) => { setGoals(prev => prev.filter(g => g.id !== id)); toast.success("Target dihapus"); };
-
-            // --- DATA IMPORT/EXPORT ---
-            const handleExport = () => {
-                const data = {
-                    version: 1,
-                    timestamp: new Date().toISOString(),
-                    data: { transactions, wallets, budgets, goals }
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `sona-backup-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                toast.success("Data berhasil didownload!");
+            const importData = (e) => {
+                const file = e.target.files[0]; if(!file) return;
+                const r = new FileReader(); r.onload = (ev) => {
+                    try { const d = JSON.parse(ev.target.result); setWallets(d.wallets); setTrx(d.trx); setBudgets(d.budgets); setGoals(d.goals); toast.success("Data dipulihkan"); } catch(err){ toast.error("File rusak"); }
+                }; r.readAsText(file);
             };
 
-            const handleImportClick = () => fileInputRef.current?.click();
-
-            const handleImportFile = (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const parsed = JSON.parse(ev.target.result);
-                        if (!parsed.data || !parsed.data.transactions) throw new Error("Format invalid");
-                        
-                        // Basic validation passed, ask for confirmation or just do it
-                        if(confirm("Apakah Anda yakin ingin me-restore data? Data saat ini akan ditimpa/digabung.")) {
-                            setTransactions(parsed.data.transactions || []);
-                            setWallets(parsed.data.wallets || []);
-                            setBudgets(parsed.data.budgets || []);
-                            setGoals(parsed.data.goals || []);
-                            toast.success("Data berhasil direstore!");
-                        }
-                    } catch (err) {
-                        toast.error("Gagal membaca file backup.");
-                        console.error(err);
-                    }
-                };
-                reader.readAsText(file);
-                e.target.value = null; // reset
-            };
+            const CATEGORIES = ["Makanan", "Transport", "Belanja", "Tagihan", "Hiburan", "Kesehatan", "Pendidikan", "Lainnya"];
 
             const renderContent = () => {
-                switch(activeTab) {
-                    case "dashboard": return <Dashboard transactions={transactions} budgets={budgets} goals={goals} />;
-                    case "transactions": return <Transactions transactions={transactions} wallets={wallets} onAddTransaction={addTx} onDeleteTransaction={delTx} categories={CATEGORIES} apiKey={apiKey} onOpenSettings={() => setIsSettingsOpen(true)} />;
-                    case "wallets": return <Wallets wallets={wallets} transactions={transactions} onAddWallet={addWallet} onDeleteWallet={delWallet} />;
-                    case "budgets": return <Budgets budgets={budgets} onAddBudget={addBudget} onDeleteBudget={delBudget} categories={CATEGORIES} />;
-                    case "goals": return <Goals goals={goals} onAddGoal={addGoal} onUpdateGoal={updateGoal} onDeleteGoal={delGoal} />;
-                    case "ai-advisor": return <AIAdvisor transactions={transactions} budgets={budgets} goals={goals} apiKey={apiKey} onOpenSettings={() => setIsSettingsOpen(true)} />;
+                switch(tab) {
+                    case "dashboard": return <Dashboard transactions={trx} budgets={budgets} goals={goals} isPrivacy={isPrivacy} onNavigate={setTab} />;
+                    case "transactions": return <Transactions transactions={trx} wallets={wallets} onAdd={addTrx} onDelete={delTrx} categories={CATEGORIES} apiKey={apiKey} onSettings={()=>setSettingsOpen(true)} isPrivacy={isPrivacy} />;
+                    case "wallets": return (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center"><h2 className="text-2xl font-bold">Dompet</h2><Button size="sm" onClick={()=>{const n=prompt("Nama Dompet:"); if(n) setWallets([...wallets, {id:'w'+Date.now(), name:n, balance:0, color:'bg-blue-500'}])}}><Plus size={16}/></Button></div>
+                            <div className="grid gap-3 md:grid-cols-2">{wallets.map(w => {
+                                const bal = w.balance + trx.filter(t=>t.walletId===w.id && t.type==='income').reduce((s,t)=>s+t.amount,0) - trx.filter(t=>t.walletId===w.id && t.type==='expense').reduce((s,t)=>s+t.amount,0);
+                                return <Card key={w.id} className={`${w.color} text-white`}><CardContent className="p-4"><div className="font-bold text-lg">{w.name}</div><div className="text-2xl font-bold mt-2 truncate">{displayMoney(bal, isPrivacy)}</div></CardContent></Card>
+                            })}</div>
+                        </div>
+                    );
+                    case "budgets": return (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center"><h2 className="text-2xl font-bold">Anggaran</h2><Button size="sm" onClick={()=>{const c=prompt("Kategori:"); const l=prompt("Batas:"); if(c&&l) setBudgets([...budgets, {id:'b'+Date.now(), category:c, limit:parseFloat(l), spent:0}])}}><Plus size={16}/></Button></div>
+                            <div className="grid gap-3 md:grid-cols-2">{budgets.map(b => (
+                                <Card key={b.id}><CardContent className="p-4 space-y-2"><div className="flex justify-between font-medium"><span>{b.category}</span><span>{displayMoney(b.spent, isPrivacy)} / {displayMoney(b.limit, isPrivacy)}</span></div><Progress value={(b.spent/b.limit)*100} className={b.spent>b.limit?"bg-red-100":"bg-slate-100"}/></CardContent></Card>
+                            ))}</div>
+                        </div>
+                    );
+                    case "goals": return (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center"><h2 className="text-2xl font-bold">Target</h2><Button size="sm" onClick={()=>{const n=prompt("Nama:"); const t=prompt("Target:"); if(n&&t) setGoals([...goals, {id:'g'+Date.now(), name:n, targetAmount:parseFloat(t), currentAmount:0}])}}><Plus size={16}/></Button></div>
+                            <div className="grid gap-3 md:grid-cols-2">{goals.map(g => (
+                                <Card key={g.id}><CardContent className="p-4 space-y-2">
+                                    <div className="flex justify-between font-medium"><span>{g.name}</span><span>{displayMoney(g.currentAmount, isPrivacy)} / {displayMoney(g.targetAmount, isPrivacy)}</span></div>
+                                    <Progress value={(g.currentAmount/g.targetAmount)*100}/>
+                                    <Button size="sm" variant="outline" className="w-full mt-2" onClick={()=>{const a=prompt("Nabung berapa?"); if(a) setGoals(gs=>gs.map(x=>x.id===g.id?{...x, currentAmount:x.currentAmount+parseFloat(a)}:x))}}>+ Nabung</Button>
+                                </CardContent></Card>
+                            ))}</div>
+                        </div>
+                    );
+                    // New Insight Tab
+                    case "insight": return <MonthlyInsight transactions={trx} isPrivacyMode={isPrivacy} />;
+                    case "ai-advisor": return <AIAdvisor transactions={trx} budgets={budgets} goals={goals} apiKey={apiKey} onOpenSettings={()=>setSettingsOpen(true)} />;
                     default: return null;
                 }
             };
 
-            const NavItem = ({ id, label, icon: Icon, isAi }) => (
-                <button
-                    onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
-                    className={cn(
-                        "w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-200 group relative",
-                        activeTab === id 
-                            ? (isAi ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md" : "bg-slate-900 text-white shadow-md") 
-                            : "text-slate-600 hover:bg-slate-100"
-                    )}
-                >
-                    <Icon className={cn("h-5 w-5", isAi && activeTab !== id && "text-purple-600")} />
-                    <span className="font-medium">{label}</span>
-                    {isAi && <span className="absolute right-4 top-1/2 -translate-y-1/2 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                    </span>}
-                </button>
-            );
-
             return (
-                <div className="flex flex-col lg:flex-row min-h-screen bg-slate-50">
-                    <Toaster richColors position="top-center" />
-                    <SettingsDialog isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} apiKey={apiKey} setApiKey={setApiKey} />
+                <div className="flex min-h-screen bg-slate-50">
+                    <Toaster position="top-center" richColors />
+                    <SettingsDialog isOpen={settingsOpen} onOpenChange={setSettingsOpen} apiKey={apiKey} setApiKey={setApiKey} />
                     
-                    {/* Hidden Input for Import */}
-                    <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
-
                     {/* Desktop Sidebar */}
-                    <aside className="hidden lg:flex lg:flex-col lg:w-72 bg-white border-r h-screen sticky top-0">
-                        <div className="p-6 border-b flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <img 
-                                    src="Sona.png" 
-                                    alt="Logo" 
-                                    className="h-8 w-auto object-contain" 
-                                    onError={(e) => e.currentTarget.style.display = 'none'} 
-                                />
-                                <div>
-                                    <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
-                                    <p className="text-xs text-slate-500 mt-1">Personal Finance</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
-                                <Settings className="h-5 w-5" />
-                            </button>
+                    <aside className="hidden lg:flex flex-col w-64 bg-white border-r fixed h-full">
+                        <div className="p-6 border-b flex items-center gap-2">
+                            <img src="Sona.png" onError={(e)=>e.target.style.display='none'} className="h-8 w-8 object-contain"/>
+                            <h1 className="text-2xl font-bold text-blue-600">Sona</h1>
                         </div>
-                        <nav className="flex-1 p-4 space-y-1">
-                            <NavItem id="dashboard" label="Beranda" icon={LayoutDashboard} />
-                            <NavItem id="transactions" label="Transaksi" icon={Receipt} />
-                            <NavItem id="wallets" label="Dompet" icon={WalletIcon} />
-                            <NavItem id="budgets" label="Anggaran" icon={PiggyBank} />
-                            <NavItem id="goals" label="Target" icon={Target} />
-                            <div className="pt-4 mt-4 border-t border-slate-100">
-                                <p className="px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Smart Features</p>
-                                <NavItem id="ai-advisor" label="AI Advisor" icon={Sparkles} isAi={true} />
-                            </div>
+                        <nav className="p-4 space-y-1 flex-1">
+                            {[
+                                {id:'dashboard', l:'Beranda', i:LayoutDashboard},
+                                {id:'transactions', l:'Transaksi', i:Receipt},
+                                {id:'wallets', l:'Dompet', i:WalletIcon},
+                                {id:'budgets', l:'Anggaran', i:PiggyBank},
+                                {id:'goals', l:'Target', i:Target},
+                                // Insight in sidebar
+                                {id:'insight', l:'Insight', i:LineChart},
+                                {id:'ai-advisor', l:'AI Advisor', i:Sparkles, c:'text-purple-600'}
+                            ].map(x => (
+                                <button key={x.id} onClick={()=>setTab(x.id)} className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors", tab===x.id?"bg-slate-100 text-blue-600": "text-slate-600 hover:bg-slate-50", x.c)}>
+                                    <x.i className="h-5 w-5"/> {x.l}
+                                </button>
+                            ))}
                         </nav>
-                        
-                        {/* Desktop Backup/Restore */}
                         <div className="p-4 border-t space-y-2">
-                            <p className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Data Management</p>
-                            <button onClick={handleExport} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-                                <Download className="h-4 w-4" /> Backup Data (JSON)
-                            </button>
-                            <button onClick={handleImportClick} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-                                <Upload className="h-4 w-4" /> Restore Data
-                            </button>
-                        </div>
-
-                        <div className="p-4 text-xs text-slate-400 text-center border-t">
-                            © 2024 Sona Finance
+                            {/* Privacy Toggle Desktop */}
+                            <div className="flex items-center justify-between px-2 text-sm text-slate-500">
+                                <span>Privasi</span>
+                                <button onClick={()=>setPrivacy(!isPrivacy)}>{isPrivacy?<EyeOff size={16}/>:<Eye size={16}/>}</button>
+                            </div>
+                            <Button variant="ghost" className="w-full justify-start text-xs" onClick={()=>setSettingsOpen(true)}><Settings className="mr-2 h-4 w-4"/> API Key</Button>
+                            <Button variant="ghost" className="w-full justify-start text-xs" onClick={exportData}><Download className="mr-2 h-4 w-4"/> Backup</Button>
+                            <label className="flex items-center w-full px-4 py-2 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-100 rounded-md">
+                                <Upload className="mr-2 h-4 w-4"/> Restore
+                                <input type="file" className="hidden" onChange={importData} accept=".json"/>
+                            </label>
                         </div>
                     </aside>
 
-                    {/* Mobile Header */}
-                    <header className="lg:hidden bg-white border-b p-4 sticky top-0 z-20 flex items-center justify-between shadow-sm">
-                         <div className="flex items-center gap-2">
-                            <img 
-                                src="Sona.png" 
-                                alt="Logo" 
-                                className="h-8 w-auto object-contain" 
-                                onError={(e) => e.currentTarget.style.display = 'none'} 
-                            />
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">/Sona</h1>
-                        </div>
-                        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
-                            {isMobileMenuOpen ? <X /> : <Menu />}
-                        </button>
-                    </header>
-
-                    {/* Mobile Menu Overlay */}
-                    {isMobileMenuOpen && (
-                        <div className="lg:hidden fixed inset-0 z-10 bg-white pt-20 px-4 flex flex-col h-screen">
-                            <div className="flex-1 space-y-2 overflow-y-auto">
-                                <NavItem id="dashboard" label="Beranda" icon={LayoutDashboard} />
-                                <NavItem id="transactions" label="Transaksi" icon={Receipt} />
-                                <NavItem id="wallets" label="Dompet" icon={WalletIcon} />
-                                <NavItem id="budgets" label="Anggaran" icon={PiggyBank} />
-                                <NavItem id="goals" label="Target" icon={Target} />
-                                <div className="border-t my-2 pt-2"></div>
-                                <NavItem id="ai-advisor" label="AI Advisor" icon={Sparkles} isAi={true} />
-                                
-                                <div className="border-t my-4 pt-4">
-                                    <p className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Settings</p>
-                                    <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-4 px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl">
-                                        <Settings className="h-5 w-5" /> Pengaturan API
-                                    </button>
-                                </div>
-
-                                <div className="border-t my-4 pt-4">
-                                    <p className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Data Management</p>
-                                    <button onClick={() => { handleExport(); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-4 px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl">
-                                        <Download className="h-5 w-5" /> Backup Data
-                                    </button>
-                                    <button onClick={() => { handleImportClick(); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-4 px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl">
-                                        <Upload className="h-5 w-5" /> Restore Data
-                                    </button>
-                                </div>
+                    {/* Mobile Layout */}
+                    <div className="flex-1 flex flex-col lg:pl-64 h-screen overflow-hidden">
+                        <header className="lg:hidden bg-white border-b p-4 flex justify-between items-center sticky top-0 z-20">
+                            <div className="flex items-center gap-2 font-bold text-xl text-blue-600">
+                                <img src="Sona.png" onError={(e)=>e.target.style.display='none'} className="h-6 w-6 object-contain"/> Sona
                             </div>
-                        </div>
-                    )}
+                            <div className="flex gap-2">
+                                {/* Privacy Toggle Mobile */}
+                                <button onClick={()=>setPrivacy(!isPrivacy)} className="p-2 text-slate-600">{isPrivacy?<EyeOff size={20}/>:<Eye size={20}/>}</button>
+                                <button onClick={()=>setMobileMenu(true)}><Menu/></button>
+                            </div>
+                        </header>
 
-                    {/* Main Content */}
-                    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full pb-24 lg:pb-8">
-                        {renderContent()}
-                    </main>
+                        <main className="flex-1 overflow-auto p-4 pb-24">
+                            {renderContent()}
+                        </main>
 
-                    {/* Mobile Bottom Nav */}
-                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t p-2 z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-                        <div className="grid grid-cols-5 gap-1">
+                        {/* Mobile Bottom Nav */}
+                        <nav className="lg:hidden bg-white border-t p-2 grid grid-cols-5 fixed bottom-0 w-full z-20">
                             {[
-                                { id: "dashboard", icon: LayoutDashboard, label: "Home" },
-                                { id: "transactions", icon: Receipt, label: "Trans" },
-                                { id: "wallets", icon: WalletIcon, label: "Wallet" },
-                                { id: "budgets", icon: PiggyBank, label: "Budget" },
-                                { id: "goals", icon: Target, label: "Goal" },
-                            ].map(item => (
-                                <button 
-                                    key={item.id}
-                                    onClick={() => setActiveTab(item.id)} 
-                                    className={cn("flex flex-col items-center p-2 rounded-lg", activeTab === item.id ? "text-blue-600 bg-blue-50" : "text-slate-400")}
-                                >
-                                    <item.icon className="h-5 w-5" />
-                                    <span className="text-[10px] font-medium mt-1">{item.label}</span>
+                                {id:'dashboard', l:'Home', i:LayoutDashboard},
+                                {id:'transactions', l:'Trx', i:Receipt},
+                                {id:'wallets', l:'Dompet', i:WalletIcon},
+                                {id:'budgets', l:'Budget', i:PiggyBank},
+                                {id:'goals', l:'Goal', i:Target},
+                            ].map(x => (
+                                <button key={x.id} onClick={()=>setTab(x.id)} className={cn("flex flex-col items-center p-2 rounded-lg text-[10px]", tab===x.id?"text-blue-600":"text-slate-400")}>
+                                    <x.i className="h-5 w-5 mb-1"/> {x.l}
                                 </button>
                             ))}
-                        </div>
-                    </nav>
+                        </nav>
+
+                        {/* Mobile Hamburger Menu */}
+                        {mobileMenu && (
+                            <div className="fixed inset-0 bg-white z-50 p-6 flex flex-col animate-in slide-in-from-right overflow-y-auto">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold">Menu</h2>
+                                    <button onClick={()=>setMobileMenu(false)}><X/></button>
+                                </div>
+                                <div className="space-y-2 flex-1">
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Utama</p>
+                                    {[
+                                        {id:'dashboard', l:'Beranda', i:LayoutDashboard},
+                                        {id:'transactions', l:'Transaksi', i:Receipt},
+                                        {id:'wallets', l:'Dompet', i:WalletIcon},
+                                        {id:'budgets', l:'Anggaran', i:PiggyBank},
+                                        {id:'goals', l:'Target', i:Target},
+                                    ].map(x => (
+                                        <button key={x.id} onClick={()=>{setTab(x.id); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl transition-colors", tab===x.id ? "bg-blue-50 text-blue-600" : "text-slate-600")}>
+                                            <x.i className="h-5 w-5"/> {x.l}
+                                        </button>
+                                    ))}
+                                    
+                                    <hr className="my-4 border-slate-100"/>
+                                    
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Analisis</p>
+                                    <button onClick={()=>{setTab('insight'); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl transition-colors", tab==='insight' ? "bg-blue-50 text-blue-600" : "text-slate-600")}><LineChart className="h-5 w-5"/> Insight Bulanan</button>
+                                    <button onClick={()=>{setTab('ai-advisor'); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-purple-50 rounded-xl transition-colors", tab==='ai-advisor' ? "bg-purple-50 text-purple-600" : "text-slate-600")}><Sparkles className="h-5 w-5"/> AI Advisor</button>
+                                    
+                                    <hr className="my-4 border-slate-100"/>
+                                    
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pengaturan</p>
+                                    <button onClick={()=>{setSettingsOpen(true); setMobileMenu(false)}} className="flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl text-slate-600"><Settings className="h-5 w-5"/> API Key</button>
+                                    <button onClick={exportData} className="flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl text-slate-600"><Download className="h-5 w-5"/> Backup Data</button>
+                                    <label className="flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl text-slate-600 cursor-pointer"><Upload className="h-5 w-5"/> Restore Data <input type="file" className="hidden" onChange={importData}/></label>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
