@@ -31,7 +31,8 @@
         "clsx": "https://esm.sh/clsx",
         "tailwind-merge": "https://esm.sh/tailwind-merge",
         "sonner": "https://esm.sh/sonner@1.4.41?deps=react@18.3.1,react-dom@18.3.1",
-        "@google/generative-ai": "https://esm.sh/@google/generative-ai"
+        "@google/generative-ai": "https://esm.sh/@google/generative-ai",
+        "html2canvas": "https://esm.sh/html2canvas@1.4.1"
       }
     }
     </script>
@@ -52,6 +53,7 @@
             background-color: #f8fafc;
             color: var(--foreground);
             overscroll-behavior-y: none; /* Prevent bounce scrolling */
+            overflow-x: hidden; /* Prevent horizontal scroll on body */
         }
 
         /* Custom Scrollbar */
@@ -80,7 +82,8 @@
             Banknote, TrendingUp, TrendingDown, Calendar as CalendarIcon, 
             CheckCircle, AlertCircle, X, Menu, Camera, Loader2, ChevronDown, 
             Sparkles, Bot, Lightbulb, Download, Upload, Settings, Key, 
-            Eye, EyeOff, LineChart, History, ArrowRight
+            Eye, EyeOff, LineChart, History, ArrowRight, Users, Calculator,
+            UserPlus, Check, Share2, Image as ImageIcon, ChevronLeft
         } from 'lucide-react';
         import { 
             PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip, 
@@ -89,6 +92,7 @@
         import { Toaster, toast } from 'sonner';
         import { clsx } from 'clsx';
         import { twMerge } from 'tailwind-merge';
+        import html2canvas from 'html2canvas';
 
         // --- UTILS & HELPERS ---
         function cn(...inputs) { return twMerge(clsx(inputs)); }
@@ -210,6 +214,335 @@
 
         // --- COMPONENTS ---
 
+        // UPDATED: Split Bill AI with Sona Loading Icon
+        function SplitBill({ apiKey, onOpenSettings, onAddTransaction, history, onSaveHistory }) {
+            const [view, setView] = useState('calculator'); // 'calculator' | 'history'
+            const [step, setStep] = useState(1); // 1: Upload, 2: Assign, 3: Result
+            const [isScanning, setIsScanning] = useState(false);
+            const [billItems, setBillItems] = useState([]); // {id, name, price, assignedTo: []}
+            const [people, setPeople] = useState([{id: 1, name: 'Saya'}]);
+            const [taxService, setTaxService] = useState(0);
+            const [newPersonName, setNewPersonName] = useState("");
+            
+            // History State
+            const [selectedHistory, setSelectedHistory] = useState(null);
+            const receiptRef = useRef(null);
+
+            // Step 1: Scan Receipt
+            const handleScan = async (e) => {
+                if (!apiKey) { toast.error("Perlu API Key"); onOpenSettings(); return; }
+                const file = e.target.files?.[0]; if (!file) return;
+                
+                setIsScanning(true);
+                try {
+                    const model = getGeminiModel(apiKey);
+                    const img = await fileToGenerativePart(file);
+                    const prompt = `Analisis struk ini. Ekstrak daftar item dan harganya. Abaikan subtotal/total/pajak di list item. 
+                    Kembalikan JSON array murni: [{ "name": "Nama Item", "price": 12000 }].`;
+                    
+                    const result = await model.generateContent([prompt, img]);
+                    const text = result.response.text().replace(/```json|```/g, "").trim();
+                    const data = JSON.parse(text);
+                    
+                    setBillItems(data.map((item, idx) => ({ ...item, id: idx, assignedTo: [] })));
+                    setStep(2);
+                    toast.success("Struk berhasil dibaca!");
+                } catch (error) {
+                    console.error(error);
+                    toast.error("Gagal membaca struk. Coba foto yang lebih jelas.");
+                } finally {
+                    setIsScanning(false);
+                    e.target.value = null;
+                }
+            };
+
+            // Step 2: Helpers
+            const addPerson = () => {
+                if(!newPersonName) return;
+                setPeople([...people, {id: Date.now(), name: newPersonName}]);
+                setNewPersonName("");
+            };
+
+            const toggleAssignment = (itemId, personId) => {
+                setBillItems(items => items.map(item => {
+                    if (item.id !== itemId) return item;
+                    const assigned = item.assignedTo.includes(personId)
+                        ? item.assignedTo.filter(id => id !== personId)
+                        : [...item.assignedTo, personId];
+                    return { ...item, assignedTo: assigned };
+                }));
+            };
+
+            const calculateResult = () => {
+                const result = {};
+                people.forEach(p => result[p.id] = { name: p.name, total: 0, items: [] });
+
+                let subtotalAssigned = 0;
+
+                billItems.forEach(item => {
+                    if (item.assignedTo.length > 0) {
+                        const splitPrice = item.price / item.assignedTo.length;
+                        item.assignedTo.forEach(pid => {
+                            if(result[pid]) {
+                                result[pid].total += splitPrice;
+                                result[pid].items.push({ ...item, share: splitPrice });
+                            }
+                        });
+                        subtotalAssigned += item.price;
+                    }
+                });
+
+                // Add tax/service proportionally
+                const totalBill = billItems.reduce((sum, i) => sum + i.price, 0);
+                const extraCharges = taxService; 
+                
+                Object.values(result).forEach(p => {
+                    if (subtotalAssigned > 0) {
+                        const share = p.total / subtotalAssigned;
+                        p.total += extraCharges * share;
+                    }
+                });
+
+                return Object.values(result);
+            };
+
+            const handleFinishSplit = () => {
+                const results = calculateResult();
+                const myShare = results.find(p => p.name === 'Saya')?.total || 0;
+                
+                // Add to Transactions
+                if (myShare > 0) {
+                    onAddTransaction({
+                        type: 'expense',
+                        amount: myShare,
+                        category: 'Makanan', // Default category
+                        description: `Split Bill (${new Date().toLocaleDateString('id-ID')})`,
+                        date: new Date().toISOString().split('T')[0],
+                        walletId: 'w1' // Default wallet, ideally selectable
+                    });
+                }
+
+                // Add to History
+                const historyItem = {
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    totalBill: billItems.reduce((sum, i) => sum + i.price, 0) + taxService,
+                    results: results
+                };
+                onSaveHistory(historyItem);
+
+                toast.success("Tersimpan! Bagian Anda masuk ke pengeluaran.");
+                setStep(1);
+                setBillItems([]);
+                setPeople([{id: 1, name: 'Saya'}]);
+                setTaxService(0);
+            };
+
+            const downloadReceipt = async () => {
+                if (receiptRef.current) {
+                    const canvas = await html2canvas(receiptRef.current);
+                    const image = canvas.toDataURL("image/png");
+                    const link = document.createElement('a');
+                    link.href = image;
+                    link.download = `Sona-SplitBill-${Date.now()}.png`;
+                    link.click();
+                    toast.success("Gambar berhasil disimpan!");
+                }
+            };
+
+            const totalBill = billItems.reduce((sum, i) => sum + i.price, 0);
+
+            // RENDER LOGIC
+            if (view === 'history') {
+                return (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => { setView('calculator'); setSelectedHistory(null); }}><ChevronLeft/></Button>
+                            <h2 className="text-2xl font-bold">Riwayat Split Bill</h2>
+                        </div>
+
+                        {selectedHistory ? (
+                            <div className="space-y-4 animate-in fade-in">
+                                <div ref={receiptRef} className="bg-white p-6 rounded-xl shadow-lg border border-slate-200 max-w-sm mx-auto">
+                                    <div className="text-center mb-6 border-b pb-4 border-dashed">
+                                        <h3 className="font-bold text-xl text-slate-800">Sona Split Bill</h3>
+                                        <p className="text-sm text-slate-500">{new Date(selectedHistory.date).toLocaleString('id-ID')}</p>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {selectedHistory.results.map((res, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-sm">
+                                                <span className="font-medium">{res.name}</span>
+                                                <span className="font-bold">{formatIDR(res.total)}</span>
+                                            </div>
+                                        ))}
+                                        <div className="pt-4 border-t border-dashed flex justify-between items-center text-base font-bold">
+                                            <span>Total</span>
+                                            <span>{formatIDR(selectedHistory.totalBill)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 text-center text-xs text-slate-400">
+                                        Dibuat dengan Sona Finance
+                                    </div>
+                                </div>
+                                <Button className="w-full" onClick={downloadReceipt}><ImageIcon className="mr-2 h-4 w-4"/> Simpan Gambar</Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {history.length > 0 ? history.map(item => (
+                                    <Card key={item.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setSelectedHistory(item)}>
+                                        <CardContent className="p-4 flex justify-between items-center">
+                                            <div>
+                                                <p className="font-medium">Split Bill</p>
+                                                <p className="text-xs text-slate-500">{new Date(item.date).toLocaleDateString('id-ID')}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-blue-600">{formatIDR(item.totalBill)}</p>
+                                                <p className="text-xs text-slate-500">{item.results.length} Orang</p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )) : <div className="text-center py-10 text-slate-500">Belum ada riwayat</div>}
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // MAIN SPLIT BILL VIEW
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-2xl font-bold truncate">AI Split Bill</h2>
+                            <p className="text-slate-500">Bagi tagihan otomatis</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setView('history')}><History className="mr-2 h-4 w-4"/> Riwayat</Button>
+                    </div>
+
+                    {step === 1 && (
+                        <Card className="border-dashed border-2 bg-slate-50">
+                            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                                <div className="bg-white p-4 rounded-full shadow-sm">
+                                    {isScanning ? <img src="Sona.png" className="h-8 w-8 animate-spin" alt="Loading"/> : <Camera className="h-8 w-8 text-purple-600"/>}
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-lg">Upload Foto Struk</h3>
+                                    <p className="text-sm text-slate-500">AI akan membaca item dan harga untuk Anda</p>
+                                </div>
+                                <div className="relative w-full max-w-xs">
+                                    <input type="file" accept="image/*" onChange={handleScan} disabled={isScanning} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                                    <Button disabled={isScanning} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                                        {isScanning ? "Menganalisis..." : "Pilih Foto"}
+                                    </Button>
+                                </div>
+                                {!apiKey && <p className="text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded">*Perlu API Key di Pengaturan</p>}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {step === 2 && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                            {/* People Management */}
+                            <Card>
+                                <CardHeader><CardTitle className="text-base">1. Siapa saja yang patungan?</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {people.map(p => (
+                                            <Badge key={p.id} variant="secondary" className="px-3 py-1 text-sm flex gap-2">
+                                                {p.name} {p.id !== 1 && <button onClick={() => setPeople(people.filter(x => x.id !== p.id))} className="text-slate-400 hover:text-red-500"><X size={12}/></button>}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input value={newPersonName} onChange={e => setNewPersonName(e.target.value)} placeholder="Nama Teman" className="h-9" onKeyDown={e => e.key === 'Enter' && addPerson()} />
+                                        <Button size="sm" onClick={addPerson}><UserPlus size={16}/></Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Item Assignment */}
+                            <Card>
+                                <CardHeader className="flex flex-row justify-between items-center">
+                                    <CardTitle className="text-base">2. Siapa pesan apa?</CardTitle>
+                                    <span className="text-sm font-bold text-slate-600">Total: {formatIDR(totalBill)}</span>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {billItems.map(item => (
+                                        <div key={item.id} className="p-3 border rounded-lg bg-white">
+                                            <div className="flex justify-between mb-2">
+                                                <span className="font-medium text-sm">{item.name}</span>
+                                                <span className="font-bold text-sm">{formatIDR(item.price)}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {people.map(p => {
+                                                    const isAssigned = item.assignedTo.includes(p.id);
+                                                    return (
+                                                        <button 
+                                                            key={p.id}
+                                                            onClick={() => toggleAssignment(item.id, p.id)}
+                                                            className={cn(
+                                                                "text-xs px-2 py-1 rounded-full border transition-all",
+                                                                isAssigned ? "bg-blue-100 border-blue-200 text-blue-700 font-medium" : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                                                            )}
+                                                        >
+                                                            {p.name} {isAssigned && "✓"}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    <div className="pt-4 border-t">
+                                        <Label>Biaya Tambahan (Pajak/Layanan)</Label>
+                                        <Input 
+                                            type="number" 
+                                            value={taxService} 
+                                            onChange={e => setTaxService(parseFloat(e.target.value) || 0)} 
+                                            placeholder="0"
+                                            className="mt-1"
+                                        />
+                                        <p className="text-xs text-slate-400 mt-1">Akan dibagi proporsional</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <div className="flex gap-2">
+                                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Ulang</Button>
+                                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => setStep(3)}>Hitung</Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div className="space-y-4 animate-in zoom-in-95">
+                            <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-0">
+                                <CardHeader><CardTitle className="text-center">Hasil Pembagian</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    {calculateResult().map((res, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                                            <div>
+                                                <div className="font-bold text-lg">{res.name}</div>
+                                                <div className="text-xs text-slate-300">{res.items.length} item</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xl font-bold text-green-400">{formatIDR(res.total)}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                            
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleFinishSplit}>
+                                <Check className="mr-2 h-4 w-4"/> Submit & Simpan ke Riwayat
+                            </Button>
+                            <Button variant="ghost" className="w-full" onClick={() => setStep(2)}>Edit Kembali</Button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         function MonthlyInsight({ transactions, isPrivacyMode }) {
             const availableMonths = useMemo(() => {
                 const months = new Set(transactions.map(t => t.date.substring(0, 7)));
@@ -320,6 +653,7 @@
             );
         }
 
+        // Updated AI Advisor with Sona Loading Icon
         function AIAdvisor({ transactions, budgets, goals, apiKey, onOpenSettings }) {
             const [advice, setAdvice] = useState("");
             const [isLoading, setIsLoading] = useState(false);
@@ -341,12 +675,12 @@
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
                         <div><h2 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="text-purple-600"/> AI Advisor</h2><p className="text-slate-500">Analisis cerdas keuangan Anda</p></div>
-                        <Button onClick={generateAdvice} disabled={isLoading} variant="ai">{isLoading ? <Loader2 className="animate-spin mr-2"/> : <Bot className="mr-2"/>} {advice ? "Analisis Ulang" : "Analisis Sekarang"}</Button>
+                        <Button onClick={generateAdvice} disabled={isLoading} variant="ai">{isLoading ? <img src="Sona.png" className="h-4 w-4 animate-spin mr-2" alt="Loading"/> : <Bot className="mr-2"/>} {advice ? "Analisis Ulang" : "Analisis Sekarang"}</Button>
                     </div>
                     {!apiKey && <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm mb-4">⚠️ API Key belum diatur. <button onClick={onOpenSettings} className="underline font-bold">Atur di sini</button></div>}
                     <Card className="min-h-[200px] border-purple-100 shadow-sm">
                         <CardContent className="p-6">
-                            {isLoading ? <div className="flex flex-col items-center justify-center h-40 text-slate-400"><Loader2 className="h-8 w-8 animate-spin mb-2"/>Menganalisis...</div> : 
+                            {isLoading ? <div className="flex flex-col items-center justify-center h-40 text-slate-400"><img src="Sona.png" className="h-8 w-8 animate-spin mb-2" alt="Loading"/>Menganalisis...</div> : 
                              advice ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: md.render(advice) }}/> : 
                              <div className="text-center text-slate-400 py-10"><Lightbulb className="h-10 w-10 mx-auto mb-2 opacity-50"/>Klik tombol untuk analisis AI</div>}
                         </CardContent>
@@ -462,6 +796,7 @@
             );
         }
 
+        // Updated ReceiptScanner with Sona Loading Icon
         function ReceiptScanner({ onScan, apiKey, onSettings }) {
             const [loading, setLoading] = useState(false);
             const handleFile = async (e) => {
@@ -481,7 +816,7 @@
                 <Card className="border-dashed border-2 bg-slate-50 mb-6">
                     <CardContent className="p-6 flex flex-col items-center text-center">
                         <div className="bg-white p-3 rounded-full mb-3 shadow-sm relative">
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin text-purple-600"/> : <Camera className="h-6 w-6 text-purple-600"/>}
+                            {loading ? <img src="Sona.png" className="h-6 w-6 animate-spin" alt="Loading"/> : <Camera className="h-6 w-6 text-purple-600"/>}
                         </div>
                         <h3 className="font-semibold text-sm">AI Scan Struk</h3>
                         <p className="text-xs text-slate-500 mb-3">Upload foto struk belanja</p>
@@ -494,6 +829,7 @@
             );
         }
 
+        // Updated Transactions with Sona Loading Icon
         function Transactions({ transactions, wallets, onAdd, onDelete, categories, apiKey, onSettings, isPrivacy }) {
             const [isOpen, setOpen] = useState(false);
             const [form, setForm] = useState({ type: 'expense', amount: '', category: categories[0], description: '', date: new Date().toISOString().split('T')[0], walletId: wallets[0]?.id });
@@ -558,8 +894,8 @@
                             <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
                                 <Label className="text-purple-700 text-xs flex gap-1 mb-2"><Sparkles size={12}/> AI Smart Input</Label>
                                 <div className="flex gap-2">
-                                    <Input value={smartInput} onChange={e=>setSmartInput(e.target.value)} placeholder="Contoh: Beli bakso 15rb" className="h-8 text-sm"/>
-                                    <Button size="sm" onClick={handleSmart} disabled={smartLoading} className="h-8 px-2 bg-purple-600">{smartLoading?<Loader2 className="animate-spin"/>:<Sparkles size={14}/>}</Button>
+                                    <Input value={smartInput} onChange={e=>setSmartInput(e.target.value)} placeholder="Contoh: Beli bakso 15rb" className="h-8 text-sm flex-1 w-auto min-w-0"/>
+                                    <Button size="sm" onClick={handleSmart} disabled={smartLoading} className="h-8 px-2 bg-purple-600">{smartLoading?<img src="Sona.png" className="h-4 w-4 animate-spin" alt="Loading"/>:<Sparkles size={14}/>}</Button>
                                 </div>
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-3">
@@ -594,6 +930,7 @@
             const [trx, setTrx] = useState(() => JSON.parse(localStorage.getItem("sona-trx") || '[]'));
             const [budgets, setBudgets] = useState(() => JSON.parse(localStorage.getItem("sona-budgets") || '[]'));
             const [goals, setGoals] = useState(() => JSON.parse(localStorage.getItem("sona-goals") || '[]'));
+            const [splitHistory, setSplitHistory] = useState(() => JSON.parse(localStorage.getItem("sona-split-bills") || '[]'));
             const [apiKey, setApiKey] = useState(() => localStorage.getItem("sona_api_key") || "");
 
             // Persist
@@ -601,19 +938,22 @@
             useEffect(() => { localStorage.setItem("sona-trx", JSON.stringify(trx)); }, [trx]);
             useEffect(() => { localStorage.setItem("sona-budgets", JSON.stringify(budgets)); }, [budgets]);
             useEffect(() => { localStorage.setItem("sona-goals", JSON.stringify(goals)); }, [goals]);
+            useEffect(() => { localStorage.setItem("sona-split-bills", JSON.stringify(splitHistory)); }, [splitHistory]);
             useEffect(() => { localStorage.setItem("sona_api_key", apiKey); }, [apiKey]);
 
             // Handlers
             const addTrx = (t) => { const nt={...t, id: Date.now().toString()}; setTrx([...trx, nt]); if(t.type==='expense') setBudgets(bs=>bs.map(b=>b.category===t.category?{...b, spent:b.spent+t.amount}:b)); toast.success("Disimpan"); };
             const delTrx = (id) => { const t = trx.find(x=>x.id===id); if(t?.type==='expense') setBudgets(bs=>bs.map(b=>b.category===t.category?{...b, spent: Math.max(0, b.spent-t.amount)}:b)); setTrx(x=>x.filter(i=>i.id!==id)); toast.success("Dihapus"); };
+            const addSplitHistory = (item) => setSplitHistory([item, ...splitHistory]);
+            
             const exportData = () => {
-                const blob = new Blob([JSON.stringify({wallets, trx, budgets, goals})], {type: "application/json"});
+                const blob = new Blob([JSON.stringify({wallets, trx, budgets, goals, splitHistory})], {type: "application/json"});
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `sona-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
             };
             const importData = (e) => {
                 const file = e.target.files[0]; if(!file) return;
                 const r = new FileReader(); r.onload = (ev) => {
-                    try { const d = JSON.parse(ev.target.result); setWallets(d.wallets); setTrx(d.trx); setBudgets(d.budgets); setGoals(d.goals); toast.success("Data dipulihkan"); } catch(err){ toast.error("File rusak"); }
+                    try { const d = JSON.parse(ev.target.result); setWallets(d.wallets); setTrx(d.trx); setBudgets(d.budgets); setGoals(d.goals); if(d.splitHistory) setSplitHistory(d.splitHistory); toast.success("Data dipulihkan"); } catch(err){ toast.error("File rusak"); }
                 }; r.readAsText(file);
             };
 
@@ -655,6 +995,7 @@
                     // New Insight Tab
                     case "insight": return <MonthlyInsight transactions={trx} isPrivacyMode={isPrivacy} />;
                     case "ai-advisor": return <AIAdvisor transactions={trx} budgets={budgets} goals={goals} apiKey={apiKey} onOpenSettings={()=>setSettingsOpen(true)} />;
+                    case "split-bill": return <SplitBill apiKey={apiKey} onOpenSettings={()=>setSettingsOpen(true)} onAddTransaction={addTrx} history={splitHistory} onSaveHistory={addSplitHistory} />;
                     default: return null;
                 }
             };
@@ -679,6 +1020,7 @@
                                 {id:'goals', l:'Target', i:Target},
                                 // Insight in sidebar
                                 {id:'insight', l:'Insight', i:LineChart},
+                                {id:'split-bill', l:'Split Bill', i:Users},
                                 {id:'ai-advisor', l:'AI Advisor', i:Sparkles, c:'text-purple-600'}
                             ].map(x => (
                                 <button key={x.id} onClick={()=>setTab(x.id)} className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors", tab===x.id?"bg-slate-100 text-blue-600": "text-slate-600 hover:bg-slate-50", x.c)}>
@@ -756,8 +1098,9 @@
                                     
                                     <hr className="my-4 border-slate-100"/>
                                     
-                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Analisis</p>
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Analisis & Tools</p>
                                     <button onClick={()=>{setTab('insight'); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl transition-colors", tab==='insight' ? "bg-blue-50 text-blue-600" : "text-slate-600")}><LineChart className="h-5 w-5"/> Insight Bulanan</button>
+                                    <button onClick={()=>{setTab('split-bill'); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-slate-50 rounded-xl transition-colors", tab==='split-bill' ? "bg-blue-50 text-blue-600" : "text-slate-600")}><Users className="h-5 w-5"/> Split Bill</button>
                                     <button onClick={()=>{setTab('ai-advisor'); setMobileMenu(false)}} className={cn("flex items-center gap-4 text-lg font-medium p-3 w-full hover:bg-purple-50 rounded-xl transition-colors", tab==='ai-advisor' ? "bg-purple-50 text-purple-600" : "text-slate-600")}><Sparkles className="h-5 w-5"/> AI Advisor</button>
                                     
                                     <hr className="my-4 border-slate-100"/>
