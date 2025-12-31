@@ -796,7 +796,6 @@
             );
         }
 
-        // Updated ReceiptScanner with Sona Loading Icon
         function ReceiptScanner({ onScan, apiKey, onSettings }) {
             const [loading, setLoading] = useState(false);
             const handleFile = async (e) => {
@@ -829,7 +828,7 @@
             );
         }
 
-        // Updated Transactions with Sona Loading Icon
+        // Updated Transactions with Sona Loading Icon and Layout Fix
         function Transactions({ transactions, wallets, onAdd, onDelete, categories, apiKey, onSettings, isPrivacy }) {
             const [isOpen, setOpen] = useState(false);
             const [form, setForm] = useState({ type: 'expense', amount: '', category: categories[0], description: '', date: new Date().toISOString().split('T')[0], walletId: wallets[0]?.id });
@@ -894,8 +893,8 @@
                             <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
                                 <Label className="text-purple-700 text-xs flex gap-1 mb-2"><Sparkles size={12}/> AI Smart Input</Label>
                                 <div className="flex gap-2">
-                                    <Input value={smartInput} onChange={e=>setSmartInput(e.target.value)} placeholder="Contoh: Beli bakso 15rb" className="h-8 text-sm flex-1 w-auto min-w-0"/>
-                                    <Button size="sm" onClick={handleSmart} disabled={smartLoading} className="h-8 px-2 bg-purple-600">{smartLoading?<img src="Sona.png" className="h-4 w-4 animate-spin" alt="Loading"/>:<Sparkles size={14}/>}</Button>
+                                    <Input value={smartInput} onChange={e=>setSmartInput(e.target.value)} placeholder="Contoh: Beli bakso 15rb" className="h-8 text-sm flex-1 min-w-0 w-auto"/>
+                                    <Button size="sm" onClick={handleSmart} disabled={smartLoading} className="h-8 px-2 bg-purple-600 shrink-0">{smartLoading?<img src="Sona.png" className="h-4 w-4 animate-spin" alt="Loading"/>:<Sparkles size={14}/>}</Button>
                                 </div>
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-3">
